@@ -1,0 +1,44 @@
+# Local runtimes and machine-specific configuration
+.venv/
+.venv-*/
+.env
+.env.*
+!.env.example
+
+# Python/editor/build caches
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+.DS_Store
+*.swp
+*.swo
+
+# Generated reports and challenge-session artifacts
+ico-scan-runs/
+ico-final-runs/
+ocr-exp2/
+corpus-matrix/
+*-runs/
+
+# Large duplicate distribution archive; the extracted offline CyberChef app
+# remains versioned under CyberChef/app/.
+CyberChef/CyberChef.zip
+
+# Repositories/build products vendored only for local compilation.  The
+# source and license files remain available in the public checkout.
+vendor/**/.git/
+vendor/**/.git/**
+vendor/CipheyCore/build/
+vendor/scalpel/build/
+vendor/scalpel/autom4te.cache/
+
+# Local native build products
+*.o
+*.a
+*.dylib.dSYM/
+*.so.dSYM/
+

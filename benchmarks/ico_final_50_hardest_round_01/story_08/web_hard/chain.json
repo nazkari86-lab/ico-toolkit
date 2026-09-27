@@ -1,0 +1,1 @@
+{"version":1,"family":"web","mechanism":"hard_service_worker","nonce":"0d6b3ad18f4f788bcff3dfa6","variant":13,"anchor_prefix":"a9b1b463f9862015","key_tag":"f505a44b708a05cf","fragment_count":7,"flip_mask":[false,false,true,false,false,true,false],"decoys":6,"family_stage":"web-block-xor","family_param":{"block":3},"complexity":1,"cycle_count":0,"cycle_params":[]}

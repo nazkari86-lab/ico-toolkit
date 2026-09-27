@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 17
+Task ID: story_05/web_hard
+Family: web
+Difficulty: hard
+Mechanism: websocket_masked
+Layers: 17
+Evidence: capture.http or structured transcript
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

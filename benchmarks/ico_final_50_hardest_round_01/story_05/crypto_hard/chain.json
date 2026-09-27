@@ -1,0 +1,1 @@
+{"version":1,"family":"crypto","mechanism":"hard_cbc_oracle","nonce":"620e561efd30780845d071b2","variant":3,"anchor_prefix":"8aa8a05c21c9c3c3","key_tag":"beeada58eaeeef99","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":9,"add":186},"complexity":1,"cycle_count":0,"cycle_params":[]}

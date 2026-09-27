@@ -1,0 +1,3 @@
+shift=7
+noise=__--__
+cipher=pjv{mpuhs_y01_01_jyf_5k73hjk62hm66h7ilk8h}

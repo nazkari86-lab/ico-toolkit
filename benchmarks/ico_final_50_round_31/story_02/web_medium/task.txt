@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 31
+Task ID: story_02/web_medium
+Family: web
+Difficulty: medium
+Mechanism: har_nested_b64
+Layers: 31
+Evidence: capture.http or structured transcript
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

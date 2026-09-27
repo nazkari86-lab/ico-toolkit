@@ -1,0 +1,1 @@
+{"version":1,"family":"reverse","mechanism":"hard_elf_reloc","nonce":"a46b807f75477646408822a6","variant":14,"anchor_prefix":"99e48f4b5ab877b4","key_tag":"81ce08c43f3a4d11","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"reverse-vm","family_param":{"xor":198,"add":47,"rotate":1},"complexity":1,"cycle_count":0,"cycle_params":[]}

@@ -1,0 +1,6 @@
+# Static AES-CBC decryption for Group Policy Preferences cpassword artifacts.
+cryptography>=41,<50
+# AES backend used by the offline Group Policy and CTF profiles.
+pycryptodome>=3.20,<4
+oletools>=0.60.2,<0.61
+impacket>=0.12,<0.14

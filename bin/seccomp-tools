@@ -1,0 +1,8 @@
+#!/bin/sh
+set -eu
+if [ -x /opt/homebrew/opt/ruby/bin/ruby ]; then
+  user_gem_bin=$(/opt/homebrew/opt/ruby/bin/ruby -e 'print Gem.user_dir' 2>/dev/null)/bin
+else
+  user_gem_bin=$(ruby -e 'print Gem.user_dir' 2>/dev/null)/bin
+fi
+exec "$user_gem_bin/seccomp-tools" "$@"

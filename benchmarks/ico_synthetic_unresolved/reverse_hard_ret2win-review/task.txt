@@ -1,0 +1,1 @@
+Pwn review: a ret2win stack overflow has offset=72 and win_addr=0x40123d. Build a static payload only; service interaction is outside this offline check.

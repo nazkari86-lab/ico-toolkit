@@ -1,0 +1,1 @@
+{"ops": [["xor", 25], ["rotl", 1], ["add", 3]], "target": "e3f7efc701e3f1f3ed8fd9555d8f53558fd9fbe18ff7015df3f9015353f9fd59595ff301435b5f535fcb", "branches": [2, 0, 1]}

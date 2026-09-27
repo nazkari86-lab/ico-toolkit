@@ -1,0 +1,1 @@
+{"version":1,"family":"reverse","mechanism":"hard_llvm_phi","nonce":"06df7dd0a201fc6bd9921d3f","variant":14,"anchor_prefix":"4b72bff0fc1d8a8e","key_tag":"f0c07627047fe1a7","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"reverse-vm","family_param":{"xor":46,"add":47,"rotate":1},"complexity":1,"cycle_count":0,"cycle_params":[]}

@@ -1,0 +1,1 @@
+{"version":1,"family":"forensics","mechanism":"hard_sqlite_wal","nonce":"ec93200491a8412b8dbeed70","variant":14,"anchor_prefix":"532e938ba6a80ea7","key_tag":"f7307d6eec6b6021","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"forensics-nibble-mask","family_param":{"stride":7},"complexity":1,"cycle_count":0,"cycle_params":[]}

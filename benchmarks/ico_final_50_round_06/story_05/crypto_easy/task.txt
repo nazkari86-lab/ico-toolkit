@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 6
+Task ID: story_05/crypto_easy
+Family: crypto
+Difficulty: easy
+Mechanism: vigenere
+Layers: 6
+Evidence: cipher evidence
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 21
+Task ID: story_08/web_hard
+Family: web
+Difficulty: hard
+Mechanism: http2_headers
+Layers: 21
+Evidence: capture.http or structured transcript
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

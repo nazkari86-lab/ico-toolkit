@@ -1,0 +1,1 @@
+{"version":1,"family":"reverse","mechanism":"hard_arm64_thumb","nonce":"95e822282efe84f7e9ebe2fd","variant":2,"anchor_prefix":"4e807989b64220cd","key_tag":"d03bbc683b1529f1","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"reverse-vm","family_param":{"xor":0,"add":11,"rotate":3},"complexity":1,"cycle_count":0,"cycle_params":[]}

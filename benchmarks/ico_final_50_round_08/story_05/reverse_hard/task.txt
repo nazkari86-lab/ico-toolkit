@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 8
+Task ID: story_05/reverse_hard
+Family: reverse
+Difficulty: hard
+Mechanism: opaque_control
+Layers: 8
+Evidence: static checker artifact
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

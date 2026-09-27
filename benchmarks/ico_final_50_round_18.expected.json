@@ -1,0 +1,507 @@
+{
+  "schema_version": 2,
+  "round_id": 18,
+  "seed": "31d069c5f240e7bcd4bc5005",
+  "records": [
+    {
+      "task_id": "story_01/web_easy",
+      "story": "story_01",
+      "family": "web",
+      "difficulty": "easy",
+      "mechanism": "chunked_http",
+      "description": "chunked HTTP response reassembly",
+      "answer_sha256": "0e157ce7c1a233b2b5d4331cb266fc40d55138c976f764e357b26cc4889ca4cd",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/pwn_medium",
+      "story": "story_01",
+      "family": "pwn",
+      "difficulty": "medium",
+      "mechanism": "ret2win_static",
+      "description": "ret2win symbol and offset inventory",
+      "answer_sha256": "5477925105563d860a67030fcaec97240acecd8f2fa543a781ec05a1602c9456",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/forensics_hard",
+      "story": "story_01",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "dns_base32",
+      "description": "DNS PCAP with split base32 label",
+      "answer_sha256": "c1d6332ba9e2aee9f6be940a28f43f218d52080287e0f20e813f3b4668de8c95",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/reverse_medium",
+      "story": "story_01",
+      "family": "reverse",
+      "difficulty": "medium",
+      "mechanism": "elf_xor_table",
+      "description": "XORed lookup table in ELF data",
+      "answer_sha256": "647660dfcf72f2258e784752a5d6e6c6fddad6f2ed6a647814ce63e75844e0da",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/crypto_easy",
+      "story": "story_01",
+      "family": "crypto",
+      "difficulty": "easy",
+      "mechanism": "caesar_noise",
+      "description": "Caesar shift with alphabet-preserving noise",
+      "answer_sha256": "3c9d782e63f664ba4a7762d349ec0b0cf743d7a59f9a49262702616f2abae05d",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/web_medium",
+      "story": "story_02",
+      "family": "web",
+      "difficulty": "medium",
+      "mechanism": "har_nested_b64",
+      "description": "HAR nested base64 JSON",
+      "answer_sha256": "5daed97776f6ba15239da181b60154fda685505a4d27720757aa1bdb1ed59a80",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/pwn_hard",
+      "story": "story_02",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "format_got",
+      "description": "format-string write plan with GOT target",
+      "answer_sha256": "fe2275604f8f44cf1c041ff35d5ddad67a475b33b6ba92f3b0b3231cba87def3",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/forensics_medium",
+      "story": "story_02",
+      "family": "forensics",
+      "difficulty": "medium",
+      "mechanism": "sqlite_wal",
+      "description": "SQLite WAL fragments and row ordering",
+      "answer_sha256": "b8dc78cd5897dcbd9248c4eda51bb411dd6eabb61d6d9f4371500baa24ad82bf",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/reverse_hard",
+      "story": "story_02",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "bytecode_vm",
+      "description": "bounded bytecode VM trace",
+      "answer_sha256": "24b073e46e741363a3c4a0c9baf74a29e2bb508010caef891d5665a1bb887536",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/crypto_medium",
+      "story": "story_02",
+      "family": "crypto",
+      "difficulty": "medium",
+      "mechanism": "repeating_xor",
+      "description": "repeating-key XOR with known crib",
+      "answer_sha256": "b178f0af17a9487cedf83737c0938674c1fa597a233544b3b2bf9f76853bdf51",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/web_hard",
+      "story": "story_03",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "jwt_payload",
+      "description": "JWT header/payload contradiction",
+      "answer_sha256": "4752f13d49c96fff6d6696d6df411bbc73ddf8ea185487064a7c4fc7fc58d99d",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/pwn_easy",
+      "story": "story_03",
+      "family": "pwn",
+      "difficulty": "easy",
+      "mechanism": "hardening_static",
+      "description": "static canary/PIE/RELRO triage",
+      "answer_sha256": "f3295652dec8a555dd0164082d3d8de21a3dd47546390717a78fff8d20aa99cc",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/forensics_easy",
+      "story": "story_03",
+      "family": "forensics",
+      "difficulty": "easy",
+      "mechanism": "png_itxt",
+      "description": "PNG ancillary chunk and palette recovery",
+      "answer_sha256": "61fcd6e37db7412d4aa5126b0d90fb42cd06eac2cabae6fbf035a35ae97c4064",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/reverse_medium",
+      "story": "story_03",
+      "family": "reverse",
+      "difficulty": "medium",
+      "mechanism": "utf16_rot",
+      "description": "rotated UTF-16 string table",
+      "answer_sha256": "9354b0d538a7059552f854e89d58baa88bb66949e1500b3ae72ffb047f11ea4e",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/crypto_hard",
+      "story": "story_03",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "rsa_cube",
+      "description": "RSA low exponent exact integer cube root",
+      "answer_sha256": "05d59089d0ed9260ecfea7016ca95f72e92a6d44109fb1f45fc311c91b2895fa",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/web_medium",
+      "story": "story_04",
+      "family": "web",
+      "difficulty": "medium",
+      "mechanism": "graphql_escaped",
+      "description": "GraphQL alias and escaped JSON",
+      "answer_sha256": "7c82e43629b2f037093193e5e95ac8b2c204b196c95872e978a1156349f46627",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/pwn_medium",
+      "story": "story_04",
+      "family": "pwn",
+      "difficulty": "medium",
+      "mechanism": "integer_trunc",
+      "description": "integer truncation and signed comparison",
+      "answer_sha256": "e86a497e252f1668318bdcebddafd9a3b4315d9788a25fcf900de33e74a083cd",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/forensics_hard",
+      "story": "story_04",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "wav_spectro",
+      "description": "WAV spectrogram sidecar and metadata",
+      "answer_sha256": "1fa72efa3ae53bfb3ffcd7effb0430d32f2ce551113dd8a1417c55dfce19e6c7",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/reverse_easy",
+      "story": "story_04",
+      "family": "reverse",
+      "difficulty": "easy",
+      "mechanism": "pe_checksum",
+      "description": "PE string and checksum transform",
+      "answer_sha256": "d1b38eebff118729a93222b838cb4b7e4ce0d93960f248b5be39fd015215228e",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/crypto_medium",
+      "story": "story_04",
+      "family": "crypto",
+      "difficulty": "medium",
+      "mechanism": "affine_permutation",
+      "description": "affine cipher with permutation",
+      "answer_sha256": "fc636116e1ed2adf1ff9660d83e5598a51de2d3a89a9380ebdd78b4aad171a82",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/web_hard",
+      "story": "story_05",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "websocket_masked",
+      "description": "masked WebSocket frame transcript",
+      "answer_sha256": "6f2cd77b90298a00bd48c33b4290ecf277214aa93c8f73b29e79f7e0431ed3df",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/pwn_hard",
+      "story": "story_05",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "ret2csu_plan",
+      "description": "ret2csu register plan",
+      "answer_sha256": "3da1d28c0d8bc43753668dfd4d94ad0db09a28d2134d7875e6dab7fb47ba4275",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/forensics_medium",
+      "story": "story_05",
+      "family": "forensics",
+      "difficulty": "medium",
+      "mechanism": "pdf_incremental",
+      "description": "PDF object stream and incremental update",
+      "answer_sha256": "aa2d537930a1ff38adf7d74dd050bf0b401460fc3d51c6fc2c2520a0b633599f",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/reverse_hard",
+      "story": "story_05",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "opaque_control",
+      "description": "control-flow puzzle with opaque predicates",
+      "answer_sha256": "3f2c46b679ded7f2f77f33c9b8252a15528fdd7bb2e4a71dfbebd6dd3c476795",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/crypto_easy",
+      "story": "story_05",
+      "family": "crypto",
+      "difficulty": "easy",
+      "mechanism": "vigenere",
+      "description": "Vigenere with supplied partial key",
+      "answer_sha256": "3f9f968745be469af5c27f83d9bc67e090bf829d71f2eb910ecd44cc29c82357",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/web_easy",
+      "story": "story_06",
+      "family": "web",
+      "difficulty": "easy",
+      "mechanism": "multipart_qp",
+      "description": "multipart quoted-printable body",
+      "answer_sha256": "f6402a1837129772c9dcb077533fc134b8a92a18da7d8914dc85fc2b86b915e4",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/pwn_medium",
+      "story": "story_06",
+      "family": "pwn",
+      "difficulty": "medium",
+      "mechanism": "got_plt",
+      "description": "GOT/PLT relocation map",
+      "answer_sha256": "f07668a8912f32add74c3c0302be7a8acfbba28a4617d9244828d1fb7734096a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/forensics_hard",
+      "story": "story_06",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "bmp_bitplane",
+      "description": "BMP bit-plane and palette alpha",
+      "answer_sha256": "5230ca8ed6acc382e12c94cead4a21591bb65353824dec2e496b2f998b0d4dd6",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/reverse_medium",
+      "story": "story_06",
+      "family": "reverse",
+      "difficulty": "medium",
+      "mechanism": "macho_load",
+      "description": "Mach-O load-command string recovery",
+      "answer_sha256": "3f543fa332777eef840184197e92911b0ded219551e1e60c3918f6df8a2c8daf",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/crypto_hard",
+      "story": "story_06",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "ecb_blocks",
+      "description": "AES-ECB cut-and-paste evidence transcript",
+      "answer_sha256": "48db142a395bfe92693dad48bda4e816ed567e339d74224962c5f253fe577f91",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/web_medium",
+      "story": "story_07",
+      "family": "web",
+      "difficulty": "medium",
+      "mechanism": "chunk_extensions",
+      "description": "chunk extensions and encoded body",
+      "answer_sha256": "65fd2b14a4fbc9c3a1676ba924d0f873314ebf33a871cd1e391f7d23ea4943d8",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/pwn_easy",
+      "story": "story_07",
+      "family": "pwn",
+      "difficulty": "easy",
+      "mechanism": "stack_win",
+      "description": "stack layout and win candidate",
+      "answer_sha256": "d1f4336e1d0cc862f69ce47cdd9cb87766d6de579c3de59f42e3c0a046e903a5",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/forensics_medium",
+      "story": "story_07",
+      "family": "forensics",
+      "difficulty": "medium",
+      "mechanism": "gif_comment",
+      "description": "GIF comments and frame order",
+      "answer_sha256": "2149befa4482a75f46fbcc479af1ce7b73316330870d68dd90387d27d9c89992",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/reverse_hard",
+      "story": "story_07",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "vm_rotmix",
+      "description": "custom VM with rotate/add/xor opcodes",
+      "answer_sha256": "142a0d7435e6c5fe69d9ea534c69d47219e3ee1cdfd80f5e7a20d1af03770095",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/crypto_medium",
+      "story": "story_07",
+      "family": "crypto",
+      "difficulty": "medium",
+      "mechanism": "nonce_reuse",
+      "description": "nonce-reuse stream XOR pair",
+      "answer_sha256": "cfa51fcf04fa8e09dd4a494ef10d816aa7e65a9370b84633aa91da2ecd1cb13f",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/web_hard",
+      "story": "story_08",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "http2_headers",
+      "description": "HTTP/2 pseudo-header transcript",
+      "answer_sha256": "58981ffcc9fe3867e5191b327900a4681873e0a2eb23211e61d85599f3ab8e01",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/pwn_medium",
+      "story": "story_08",
+      "family": "pwn",
+      "difficulty": "medium",
+      "mechanism": "rop_constraints",
+      "description": "constrained ROP gadget inventory",
+      "answer_sha256": "a9d992f79123305d5ccf256c4ce006d5a8e4cf9514b436b907f76d20c3524fb9",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/forensics_easy",
+      "story": "story_08",
+      "family": "forensics",
+      "difficulty": "easy",
+      "mechanism": "tar_pax",
+      "description": "TAR/PAX metadata and deleted-name carving",
+      "answer_sha256": "f2cbad2f97e607c0be188b4c5963880c6df60be5fb15b158e74d9fbde5f0547f",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/reverse_easy",
+      "story": "story_08",
+      "family": "reverse",
+      "difficulty": "easy",
+      "mechanism": "arm64_constants",
+      "description": "ARM64 constant-folded checker",
+      "answer_sha256": "d860946b4bfb04eadc251c089107dedb409d9cb0f1d4b6c9a743d5736897161b",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/crypto_hard",
+      "story": "story_08",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "rsa_common_modulus",
+      "description": "RSA common-modulus recovery",
+      "answer_sha256": "50eda3590fc72601073e31fb94ded7dedbf9ee167e406500e4e2bd5604454b9a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/web_medium",
+      "story": "story_09",
+      "family": "web",
+      "difficulty": "medium",
+      "mechanism": "graphql_persisted",
+      "description": "persisted-query batch response",
+      "answer_sha256": "6add966c24f6409fb6c5b726b5ef1e7d3d4388672b95c676ca9d415524608098",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/pwn_hard",
+      "story": "story_09",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "format_positional",
+      "description": "format-string positional map",
+      "answer_sha256": "0b1128dc7e2d9a004818ff1d94e1817c498e00b655d0c169ea65c7090502456f",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/forensics_hard",
+      "story": "story_09",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "pcap_gzip",
+      "description": "TCP stream reconstruction with gzip",
+      "answer_sha256": "697b66dbb42311411abaed242d9d104472df438e625e53ea9c3070edb48ade4a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/reverse_medium",
+      "story": "story_09",
+      "family": "reverse",
+      "difficulty": "medium",
+      "mechanism": "dotnet_metadata",
+      "description": ".NET metadata/string decoding",
+      "answer_sha256": "ecccf394fadf9408d2611331353527f3c7af07e0bb4ea2c8f378da36b6eae976",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/crypto_easy",
+      "story": "story_09",
+      "family": "crypto",
+      "difficulty": "easy",
+      "mechanism": "rail_b64",
+      "description": "rail-fence plus URL-safe base64",
+      "answer_sha256": "dd959bd89076ba2ebc23e2a1a500e82a63b8faafdb44b55fd731954c5ea0e819",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/web_hard",
+      "story": "story_10",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "http_batch",
+      "description": "batched HTTP response normalization",
+      "answer_sha256": "1a4869973c87fd8b332131f2adb2ff188218336bd85c9e205071a49722e243ca",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/pwn_hard",
+      "story": "story_10",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "seccomp_read",
+      "description": "seccomp/read syscall constraint report",
+      "answer_sha256": "79b64908dbf103d292c5bb12d3f31258cffe633711c1ee89cec1ae01afc0e337",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/forensics_medium",
+      "story": "story_10",
+      "family": "forensics",
+      "difficulty": "medium",
+      "mechanism": "sqlite_trigger",
+      "description": "SQLite trigger history and hex fragments",
+      "answer_sha256": "0251dae5855ef64e1e90685be7017303b6de61105e3acc6914d692ec7a4a5a76",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/reverse_hard",
+      "story": "story_10",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "branch_tables",
+      "description": "multi-stage table/rotation/branch checker",
+      "answer_sha256": "aa524d3b900e37169e781c09efbdccd1a2558a9f06b70838c369206160dc5e6f",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/crypto_medium",
+      "story": "story_10",
+      "family": "crypto",
+      "difficulty": "medium",
+      "mechanism": "cbc_iv",
+      "description": "AES-CBC IV reuse with known prefix",
+      "answer_sha256": "1f9eafa480e6a5d9c5da1586ba8c8eb6dde0df85fd156029d1c67cf0173e7714",
+      "checker": "sha256"
+    }
+  ]
+}

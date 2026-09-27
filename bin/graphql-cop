@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+python_bin="${ICO_GRAPHQL_PYTHON:-${ICO_EXTRA_VENV:-$root/.venv-extra}/bin/python}"
+exec "$python_bin" "$root/vendor/graphql-cop/graphql-cop.py" "$@"

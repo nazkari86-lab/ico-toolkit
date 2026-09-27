@@ -1,0 +1,1 @@
+A DNS trace carries a Base32 secret split across query labels. Reassemble and decode the labels.

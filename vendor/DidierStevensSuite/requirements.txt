@@ -1,0 +1,30 @@
+BeautifulSoup4
+PySocks
+compressed_rtf
+dnslib
+dpkt
+javaobj-py3
+minidump
+msoffcrypto-tool
+olefile
+oletools
+paramiko
+pathlab
+pefile
+pfp
+ppdeep
+pyasn1
+pycryptodome
+pydivert
+pyshark
+python-magic ; sys_platform != "win32"
+python-magic-bin ; sys_platform == "win32"
+python-registry
+pyzipper
+requests
+yara-python
+aiodns
+bitstruct
+pycares
+simplejson
+win_inet_pton

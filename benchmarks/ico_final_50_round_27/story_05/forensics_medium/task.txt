@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 27
+Task ID: story_05/forensics_medium
+Family: forensics
+Difficulty: medium
+Mechanism: pdf_incremental
+Layers: 27
+Evidence: media/network/archive artifact
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

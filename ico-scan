@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+TOOLKIT_ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
+if [ -f "$TOOLKIT_ROOT/env.sh" ]; then
+  . "$TOOLKIT_ROOT/env.sh"
+fi
+
+if [ -n "${ICO_TOOLKIT_VENV:-}" ] && [ -x "$ICO_TOOLKIT_VENV/bin/python3" ]; then
+  exec "$ICO_TOOLKIT_VENV/bin/python3" "$TOOLKIT_ROOT/ico_scan.py" "$@"
+fi
+
+exec python3 "$TOOLKIT_ROOT/ico_scan.py" "$@"

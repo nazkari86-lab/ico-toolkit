@@ -1,0 +1,1 @@
+{"version":1,"family":"forensics","mechanism":"hard_dns_crypt","nonce":"9f0031c820e29f20d3567453","variant":10,"anchor_prefix":"e8fca0885db9663d","key_tag":"4ed127ab120abe34","fragment_count":7,"flip_mask":[false,false,true,false,false,true,false],"decoys":6,"family_stage":"forensics-nibble-mask","family_param":{"stride":7},"complexity":1,"cycle_count":0,"cycle_params":[]}

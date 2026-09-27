@@ -1,0 +1,9 @@
+VMTRACE v9
+OP=LOAD_TABLE
+BLOCK=decoy-3-8404007c DATA=[{"slot":2,"data":"$6^F#-0GPu!Br~"},{"slot":4,"data":"FzHl^Z=g02p7Vt"},{"slot":1,"data":"S7}i8cX-Ikp7z!"},{"slot":5,"data":"PtW8n0TOwF*a+1"},{"slot":0,"data":"$d@_xlfK0#Fj-c"},{"slot":3,"data":"VH{A*H6!*M#5A9"},{"slot":6,"data":"&Ts<>0IeRp"}]
+BLOCK=decoy-2-f4094cba DATA=[{"slot":3,"data":"aMg@TLE72!Ig;M"},{"slot":5,"data":"wrTn!h8(Qaddk4"},{"slot":4,"data":"yuD%II2T=Mh?Sc"},{"slot":0,"data":"<tyX*kfK0#Fj-c"},{"slot":2,"data":"euY4)N0hTxGlx1"},{"slot":1,"data":"><sml}K2~p!V5!"},{"slot":6,"data":"yXaPA|aT1L"}]
+BLOCK=story_01/reverse_hard DATA=[{"slot":5,"data":"S(^!ndM2!Q"},{"slot":4,"data":">Z4s;>_(b-"},{"slot":6,"data":"yGZ=Wy*"},{"slot":1,"data":"W#0+Oem3T?"},{"slot":0,"data":"_8-M0fFj-c"},{"slot":3,"data":"-J~Usnpl2Q"},{"slot":2,"data":"ER68ZxcE)S"}]
+BLOCK=decoy-4-07604a88 DATA=[{"slot":1,"data":"|E_g*u=MZFAkm<"},{"slot":6,"data":"(WXH{M1(G7"},{"slot":2,"data":"3bbneSIqOK+r--"},{"slot":0,"data":"UaBpSlfK0#Fj-c"},{"slot":3,"data":"P|5qR&(>Ems9y-"},{"slot":4,"data":"v)+EAp~Qb8>#r3"},{"slot":5,"data":"-h%<tfHQl=3|$3"}]
+BLOCK=decoy-0-59788555 DATA=[{"slot":3,"data":"UCF91+i&y%*TrZ"},{"slot":6,"data":"7bn36Nr*PG"},{"slot":2,"data":"l_$N1A`aCD)hv!"},{"slot":0,"data":"o`1jOkfK0#Fj-c"},{"slot":4,"data":"sW!@kkq*y*}<rG"},{"slot":1,"data":"%(qDBh-PD?zvEJ"},{"slot":5,"data":"qo}oLZEJ$3{JPc"}]
+BLOCK=decoy-1-e676ba1d DATA=[{"slot":0,"data":"o0T-SmfK0#Fj-c"},{"slot":1,"data":"}tiyZ2w&l|qi?G"},{"slot":5,"data":"f(EUTRTzTY{Z!H"},{"slot":4,"data":"0A1%zRsKaZj#2_"},{"slot":6,"data":"ih$PI*ZbN_"},{"slot":2,"data":"I{fvg{B8OeVcgZ"},{"slot":3,"data":"J=MSgkV$Gr)KD+"}]
+BLOCK=decoy-5-5a0dc730 DATA=[{"slot":6,"data":"VR^=fdRj7j"},{"slot":1,"data":"4A{a+x)d=so%?a"},{"slot":4,"data":"xXvyYck%cBXeFY"},{"slot":0,"data":"F8zAClfK0#Fj-c"},{"slot":5,"data":"jBwfnGm!;fTP88"},{"slot":3,"data":"EnIY9vYh`-1*N4"},{"slot":2,"data":"IU6hj-}hpSeAld"}]

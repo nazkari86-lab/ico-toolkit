@@ -1,0 +1,3 @@
+key_prefix=IC
+key=ICO
+cipher=qec{nkbin_f11_05_ktm_j56280e5o1i5h182p672}

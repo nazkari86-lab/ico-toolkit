@@ -1,0 +1,4 @@
+mode=AES-CBC
+known_prefix=ico{
+iv_reused=true
+cipher=320f12f5f9d9afb38fab77241e67786a341fffe7f0a5e3d7c762201e55716d584ceeadcfdee080903769

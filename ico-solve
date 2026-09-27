@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+. "$ROOT/env.sh"
+exec python3 "$ROOT/ico_solve.py" "$@"

@@ -1,0 +1,26 @@
+#!/usr/bin/env python3
+"""Read-only LIEF structural summary for a supplied executable."""
+
+from __future__ import annotations
+
+import argparse
+import json
+
+import lief
+
+
+parser = argparse.ArgumentParser(description="Print a bounded PE/ELF/Mach-O summary using LIEF")
+parser.add_argument("path")
+args = parser.parse_args()
+binary = lief.parse(args.path)
+if binary is None:
+    raise SystemExit("LIEF could not identify the input")
+sections = []
+for section in binary.sections:
+    sections.append({"name": section.name, "size": int(section.size), "offset": int(section.offset)})
+payload = {
+    "format": str(binary.format),
+    "entrypoint": int(binary.entrypoint) if hasattr(binary, "entrypoint") else None,
+    "sections": sections[:256],
+}
+print(json.dumps(payload, ensure_ascii=False, sort_keys=True))

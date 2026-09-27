@@ -1,0 +1,13 @@
+#!/usr/bin/env python3
+"""Pass-through to Androguard's offline CLI."""
+
+from __future__ import annotations
+
+import sys
+
+from androguard.cli.cli import entry_point
+
+
+if __name__ == "__main__":
+    sys.argv[0] = sys.argv[0].removesuffix(".exe")
+    raise SystemExit(entry_point())

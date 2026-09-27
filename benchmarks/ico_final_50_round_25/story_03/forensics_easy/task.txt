@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 25
+Task ID: story_03/forensics_easy
+Family: forensics
+Difficulty: easy
+Mechanism: png_itxt
+Layers: 25
+Evidence: media/network/archive artifact
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.

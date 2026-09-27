@@ -1,0 +1,9 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+python_bin="${ICO_EXTRA_VENV:-$root/.venv-extra}/bin/python"
+if [ ! -x "$python_bin" ]; then
+  echo "qiling: extra runtime is missing: $python_bin" >&2
+  exit 127
+fi
+exec "$python_bin" "$root/ico_platform_tools.py" qiling "$@"

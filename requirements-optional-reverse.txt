@@ -1,0 +1,4 @@
+# Static x86/x64 disassembly for candidate-to-success-branch analysis.
+capstone>=5,<6
+# AES-GCM/stream-cipher support for the offline Rusty Vault and AEA profiles.
+pycryptodome>=3.20,<4

@@ -1,0 +1,1 @@
+{"version":1,"family":"reverse","mechanism":"hard_vm_selfmod","nonce":"c8c9e6c745514286a14122ea","variant":9,"anchor_prefix":"032c00d45904f2c3","key_tag":"e59abefba9c8b4e5","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"reverse-vm","family_param":{"xor":7,"add":32,"rotate":3},"complexity":1,"cycle_count":0,"cycle_params":[]}

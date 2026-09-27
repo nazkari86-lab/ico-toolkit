@@ -1,0 +1,14 @@
+ICO FINAL BENCHMARK
+Round: 2
+Profile: hardest
+Task ID: story_06/reverse_hard
+Family: reverse
+Difficulty: hard
+Mechanism: hard_wasm_stack
+Layers: 2
+Evidence: static checker artifact
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.
+Pipeline: nonce-derived key -> rolling byte transform -> per-byte rotation -> seeded permutation -> zlib -> base85 -> fragment reassembly
+Integrity: the SHA-256 of the base85 stage is split across chain.json and checksum.txt; decoys must be rejected by that digest
+The artifact contains multiple records and no record is trusted by position alone.

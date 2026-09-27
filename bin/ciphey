@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+root=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+venv="${ICO_CIPHEY_VENV:-${ICO_EXTRA_VENV:-$root/.venv-extra}}"
+exec "$venv/bin/ciphey" "$@"

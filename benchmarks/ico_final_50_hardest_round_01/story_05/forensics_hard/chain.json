@@ -1,0 +1,1 @@
+{"version":1,"family":"forensics","mechanism":"hard_pdf_objstm","nonce":"a179cc2e970a1086f0e1737e","variant":6,"anchor_prefix":"6516a2e79a7078fc","key_tag":"24a51518ca788a80","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"forensics-nibble-mask","family_param":{"stride":7},"complexity":1,"cycle_count":0,"cycle_params":[]}

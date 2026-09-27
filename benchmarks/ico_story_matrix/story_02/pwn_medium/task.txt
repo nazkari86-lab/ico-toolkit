@@ -1,0 +1,1 @@
+Synthetic pwn medium ret2win review; static payload only; offset=46 target=0x401136.

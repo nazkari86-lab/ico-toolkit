@@ -1,0 +1,1 @@
+Synthetic pwn easy ret2win review; static payload only; offset=44 target=0x401136.

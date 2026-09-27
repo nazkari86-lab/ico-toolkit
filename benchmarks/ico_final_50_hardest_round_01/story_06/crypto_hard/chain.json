@@ -1,0 +1,1 @@
+{"version":1,"family":"crypto","mechanism":"hard_rsa_wiener","nonce":"8cdcf76d1a8d73020d8107c8","variant":6,"anchor_prefix":"b00109a567c62f08","key_tag":"135529a7f2bd5915","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":5,"add":212},"complexity":1,"cycle_count":0,"cycle_params":[]}

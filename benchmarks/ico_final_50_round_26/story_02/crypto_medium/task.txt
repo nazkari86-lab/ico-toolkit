@@ -1,0 +1,10 @@
+ICO FINAL BENCHMARK
+Round: 26
+Task ID: story_02/crypto_medium
+Family: crypto
+Difficulty: medium
+Mechanism: repeating_xor
+Layers: 26
+Evidence: cipher evidence
+Objective: recover the single ico{...} value from the supplied evidence.
+The solver must use the declared transform and must not guess values.
