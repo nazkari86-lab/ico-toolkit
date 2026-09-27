@@ -194,6 +194,7 @@ def run_cycle(
             and score.get("verified_count") == 50
             and score.get("verified_score") == 1.0
             and score.get("false_positive_count") == 0
+            and score.get("duplicate_count") == 0
             and score.get("ten_out_of_ten") is True
         )
         if not exact:

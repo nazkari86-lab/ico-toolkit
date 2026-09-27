@@ -112,12 +112,53 @@ class CommandResult:
         return asdict(self) | {"ok": self.ok}
 
 
+@dataclass(frozen=True)
+class RunnerPolicy:
+    """Optional child-process limits; ``None`` preserves legacy behavior."""
+
+    max_cpu_seconds: int | None = None
+    max_memory_bytes: int | None = None
+    max_output_bytes: int | None = None
+
+    def __post_init__(self) -> None:
+        for name, value in (
+            ("max_cpu_seconds", self.max_cpu_seconds),
+            ("max_memory_bytes", self.max_memory_bytes),
+            ("max_output_bytes", self.max_output_bytes),
+        ):
+            if value is not None and int(value) <= 0:
+                raise ValueError(f"{name} must be positive when provided")
+
+
+def _apply_child_limits(policy: RunnerPolicy) -> None:
+    """Apply POSIX limits in the child immediately before exec."""
+
+    if os.name != "posix":
+        return
+    try:
+        import resource
+
+        if policy.max_cpu_seconds is not None:
+            limit = int(policy.max_cpu_seconds)
+            resource.setrlimit(resource.RLIMIT_CPU, (limit, limit))
+        if policy.max_memory_bytes is not None and hasattr(resource, "RLIMIT_AS"):
+            limit = int(policy.max_memory_bytes)
+            current_soft, current_hard = resource.getrlimit(resource.RLIMIT_AS)
+            hard = limit if current_hard in (-1, resource.RLIM_INFINITY) else min(current_hard, limit)
+            resource.setrlimit(resource.RLIMIT_AS, (min(limit, hard), hard))
+    except (ImportError, OSError, ValueError):
+        # Limits are an additional hardening layer.  Timeout/process-group
+        # cleanup remains authoritative when a platform rejects a limit.
+        return
+
+
 @dataclass
 class CommandRunner:
     """Run external tools without a shell and preserve bounded evidence."""
 
     log_dir: Optional[Path] = None
     capture_limit: int = MAX_CAPTURE_BYTES
+    policy: RunnerPolicy | None = None
     _sequence: int = field(default=0, init=False, repr=False)
     _log_lock: threading.Lock = field(default_factory=threading.Lock, init=False, repr=False)
 
@@ -136,6 +177,9 @@ class CommandRunner:
         argv = [str(value) for value in args]
         started = time.monotonic()
         result = CommandResult(args=argv, returncode=None)
+        capture_limit = self.capture_limit
+        if self.policy is not None and self.policy.max_output_bytes is not None:
+            capture_limit = min(capture_limit, int(self.policy.max_output_bytes))
         executable = shutil.which(argv[0]) if argv else None
         if not argv or executable is None:
             result.missing = True
@@ -154,6 +198,7 @@ class CommandRunner:
                     stderr=stderr_file,
                     shell=False,
                     start_new_session=True,
+                    preexec_fn=(lambda: _apply_child_limits(self.policy)) if self.policy is not None and os.name == "posix" else None,
                 )
                 try:
                     process.communicate(timeout=max(0.1, timeout))
@@ -169,8 +214,8 @@ class CommandRunner:
                 stderr_file.flush()
                 stdout_file.seek(0)
                 stderr_file.seek(0)
-                result.stdout = self._decode(stdout_file.read(self.capture_limit + 1))
-                result.stderr = self._decode(stderr_file.read(self.capture_limit + 1))
+                result.stdout = self._decode(stdout_file.read(capture_limit + 1), capture_limit)
+                result.stderr = self._decode(stderr_file.read(capture_limit + 1), capture_limit)
         except OSError as exc:
             result.returncode = None
             result.stderr = f"{type(exc).__name__}: {exc}"
@@ -178,14 +223,15 @@ class CommandRunner:
         self._write_log(log_name, result)
         return result
 
-    def _decode(self, data: bytes) -> str:
+    def _decode(self, data: bytes, capture_limit: int | None = None) -> str:
         if not data:
             return ""
-        truncated = len(data) > self.capture_limit
-        view = data[: self.capture_limit]
+        limit = self.capture_limit if capture_limit is None else capture_limit
+        truncated = len(data) > limit
+        view = data[:limit]
         text = view.decode("utf-8", errors="replace")
         if truncated:
-            text += f"\n[output truncated at {self.capture_limit} bytes]"
+            text += f"\n[output truncated at {limit} bytes]"
         return text
 
     def _write_log(self, log_name: str, result: CommandResult) -> None:

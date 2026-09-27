@@ -3,6 +3,7 @@ from __future__ import annotations
 import tempfile
 import unittest
 import shutil
+import os
 import sys
 import time
 from unittest.mock import patch
@@ -195,6 +196,29 @@ class ToolAdapterTests(unittest.TestCase):
             with patch("ico_tool_adapters.profiles_for_classification", return_value=profiles):
                 third = run_adapter_profiles([artifact], **kwargs)
             self.assertFalse(next(item for item in third if item.tool == "cached").cache_hit)
+
+    def test_adapter_cache_invalidates_when_toolkit_revision_changes(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            artifact = root / "evidence.txt"
+            artifact.write_text("same", encoding="utf-8")
+            profiles = (AdapterProfile("revisioned", sys.executable, lambda _path, _out: [sys.executable, "-c", "print('ico{revisioned}')"], timeout=3, stage="fast"),)
+            classification = Classification("text/plain", "text", "text", ".txt")
+            kwargs = {
+                "classifications": {artifact.resolve(): classification},
+                "output_dir": root / "adapters",
+                "runner": CommandRunner(root / "commands"),
+                "mode": "full",
+                "cache_dir": root / "cache",
+            }
+            with patch.dict(os.environ, {"ICO_TOOLKIT_REVISION": "revision-a"}):
+                with patch("ico_tool_adapters.profiles_for_classification", return_value=profiles):
+                    first = run_adapter_profiles([artifact], **kwargs)
+            with patch.dict(os.environ, {"ICO_TOOLKIT_REVISION": "revision-b"}):
+                with patch("ico_tool_adapters.profiles_for_classification", return_value=profiles):
+                    second = run_adapter_profiles([artifact], **kwargs)
+            self.assertFalse(next(item for item in first if item.tool == "revisioned").cache_hit)
+            self.assertFalse(next(item for item in second if item.tool == "revisioned").cache_hit)
 
     def test_verified_paths_can_skip_generic_adapters(self):
         with tempfile.TemporaryDirectory() as directory:

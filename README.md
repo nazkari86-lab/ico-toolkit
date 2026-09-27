@@ -93,8 +93,10 @@ ico-solve --tools
 ico-solve path/to/story --workers 6 --deadline 180 --cache ./ico-solve-cache --debug ./ico-solve-debug
 ```
 
-Ключ кэша включает SHA-256 входа, контекст задачи, исполняемый файл и
-аргументы; изменение файла или условия автоматически создаёт новый результат.
+Ключ кэша включает SHA-256 входа, контекст задачи, исполняемый файл, аргументы
+и `ICO_TOOLKIT_REVISION`; изменение файла, условия или версии адаптеров
+автоматически создаёт новый результат. Для повторяемого запуска можно задать
+свою ревизию, например `ICO_TOOLKIT_REVISION=final-2026-09-28`.
 Производные текстовые файлы из carving и декомпиляции один раз возвращаются в
 универсальный registry. Для измерения времени и покрытия есть локальный
 benchmark:
@@ -102,6 +104,35 @@ benchmark:
 ```sh
 python3 scripts/benchmark_ico_solve.py path/to/task --mode fast --repeat 2
 ```
+
+Для длительных прогонов можно сохранять provenance в SQLite без копирования
+самих файлов:
+
+```sh
+ico-solve path/to/story --cache ./ico-solve-cache \
+  --evidence-db ./ico-evidence.sqlite3 --debug ./ico-solve-debug
+```
+
+Внешние команды запускаются без shell, в отдельной process group, с bounded
+выводом, CPU-лимитом, лимитом адресного пространства и таймаутом. Это не даёт
+локальному адаптеру превратить один повреждённый файл в бесконечный процесс;
+сетевые профили по-прежнему остаются `local-only` и автоматически не включаются.
+
+Для независимой проверки на закрытом holdout используйте manifest только с
+SHA-256 ответов. `holdout_benchmark.py` отклоняет plaintext-поля и
+flag-shaped значения, а scorecard отдельно показывает verified, missing,
+false-positive и duplicate кандидаты:
+
+```sh
+python3 scripts/holdout_benchmark.py \
+  --report ./ico-solve-debug/report.json \
+  --manifest ./private-holdout-manifest.json \
+  --out ./holdout-score.json
+```
+
+Plaintext флаги не должны попадать в репозиторий или в manifest; сам holdout
+не является доказательством решения реальной платформенной задачи, пока ответ
+не принят разрешённым checker-ом.
 
 Встроены локальные адаптеры CyberChef (Base64, Base32, hex, URL, ROT13,
 reverse, gzip/zlib), `binwalk`, `zsteg`, `pngcheck`, `exiftool`, `7zz`,

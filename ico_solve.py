@@ -12,8 +12,10 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import math
 import os
 import re
+import sqlite3
 import shutil
 import sys
 import tarfile
@@ -26,12 +28,13 @@ from types import SimpleNamespace
 from typing import Any, Iterable, Sequence
 
 from ico_scan import run_scan
-from ico_scan_core import CommandRunner, Classification, classify, flag_triage
+from ico_scan_core import MAX_CAPTURE_BYTES, CommandRunner, Classification, RunnerPolicy, classify, flag_triage
 from ico_scan_profiles import profiles_for
 from ico_solver_engine import SolverContext, SolverLimits
 from ico_tool_adapters import AdapterEvidence, available_tool_specs, run_adapter_profiles, tool_inventory
 from ico_universal_registry import build_default_registry
 from ico_final_benchmark_solver import solve_final_task
+from ico_evidence_store import EvidenceStore, persist_solve_report
 
 
 FAMILIES = ("web", "pwn", "forensics", "reverse", "crypto")
@@ -213,7 +216,13 @@ def _safe_member(name: str) -> bool:
     return bool(name) and not path.is_absolute() and ".." not in path.parts and "\\" not in name and not name.startswith(("-", "@"))
 
 
-def _extract_archive(path: Path, destination: Path, limits: SolverLimits) -> Path:
+def _extract_archive(
+    path: Path,
+    destination: Path,
+    limits: SolverLimits,
+    *,
+    runner_policy: RunnerPolicy | None = None,
+) -> Path:
     """Extract common containers with path, file-count, and byte bounds."""
 
     destination.mkdir(parents=True, exist_ok=True)
@@ -270,12 +279,18 @@ def _extract_archive(path: Path, destination: Path, limits: SolverLimits) -> Pat
     # present.  If it is absent, retain the source as a single artifact.
     executable = shutil.which("7zz")
     if executable and suffix in {".7z", ".rar", ".iso"}:
-        runner = CommandRunner(destination / "commands")
+        runner = CommandRunner(destination / "commands", policy=runner_policy)
         runner.run([executable, "x", "-y", f"-o{destination}", str(path)], cwd=path.parent, timeout=120.0, log_name="solve-archive-extract")
     return destination
 
 
-def _prepare_inputs(inputs: Sequence[Path], workspace: Path, limits: SolverLimits) -> tuple[Path, ...]:
+def _prepare_inputs(
+    inputs: Sequence[Path],
+    workspace: Path,
+    limits: SolverLimits,
+    *,
+    runner_policy: RunnerPolicy | None = None,
+) -> tuple[Path, ...]:
     prepared: list[Path] = []
     source_root = workspace / "sources"
     source_root.mkdir(parents=True, exist_ok=True)
@@ -290,7 +305,7 @@ def _prepare_inputs(inputs: Sequence[Path], workspace: Path, limits: SolverLimit
             digest = hashlib.sha256(path.read_bytes()[: limits.max_bytes]).hexdigest()[:12]
             destination = source_root / f"{_safe_name(path.stem)}-{digest}"
             try:
-                prepared.append(_extract_archive(path, destination, limits))
+                prepared.append(_extract_archive(path, destination, limits, runner_policy=runner_policy))
             except (OSError, ValueError, tarfile.TarError, zipfile.BadZipFile):
                 prepared.append(path)
             continue
@@ -372,12 +387,18 @@ def _task_id(text: str, story: str, family: str) -> str:
     return match.group(1).strip() if match else f"{story}/{family}"
 
 
-def discover_solve_slots(inputs: Sequence[Path], workspace: Path, limits: SolverLimits) -> tuple[SolveSlot, ...]:
+def discover_solve_slots(
+    inputs: Sequence[Path],
+    workspace: Path,
+    limits: SolverLimits,
+    *,
+    runner_policy: RunnerPolicy | None = None,
+) -> tuple[SolveSlot, ...]:
     """Expand supplied containers and group related files into deterministic slots."""
 
     workspace = workspace.expanduser().resolve()
     workspace.mkdir(parents=True, exist_ok=True)
-    prepared = _prepare_inputs(inputs, workspace, limits)
+    prepared = _prepare_inputs(inputs, workspace, limits, runner_policy=runner_policy)
     manifests: dict[Path, Path] = {}
     loose: list[Path] = []
     for prepared_root in prepared:
@@ -697,6 +718,7 @@ def solve_inputs(
     workers: int = 4,
     deadline_seconds: float | None = None,
     cache_dir: Path | None = None,
+    evidence_db: Path | None = None,
 ) -> SolveReport:
     """Run task-aware, universal, and extended offline adapters."""
 
@@ -719,8 +741,17 @@ def solve_inputs(
     started = time.monotonic()
     deadline_at = None if deadline_seconds is None else started + max(0.0, deadline_seconds)
     try:
-        prepared_inputs = _prepare_inputs(source_paths, workspace / "prepared", limits)
-        slots = discover_solve_slots(prepared_inputs, workspace / "discovery", limits)
+        # Apply one bounded policy to every external process launched by the
+        # solve path.  ``run_scan`` receives this runner below, so its
+        # classifiers, task solvers, and adapter profiles share the same
+        # process-group cleanup and resource limits.
+        runner_policy = RunnerPolicy(
+            max_cpu_seconds=max(1, math.ceil(limits.timeout_seconds)),
+            max_memory_bytes=2 * 1024 * 1024 * 1024,
+            max_output_bytes=MAX_CAPTURE_BYTES,
+        )
+        prepared_inputs = _prepare_inputs(source_paths, workspace / "prepared", limits, runner_policy=runner_policy)
+        slots = discover_solve_slots(prepared_inputs, workspace / "discovery", limits, runner_policy=runner_policy)
         if not slots:
             errors.append("no readable task files or artifacts found")
             return SolveReport((), (), tuple(errors))
@@ -741,7 +772,7 @@ def solve_inputs(
         # surface encoded decoys and would make a local benchmark score depend
         # on which optional binaries happen to be installed.
         benchmark_fast_path = bool(slots) and benchmark_slots
-        runner = CommandRunner(workspace / "adapter-commands")
+        runner = CommandRunner(workspace / "adapter-commands", policy=runner_policy)
         scan_report: dict[str, object] = {}
         if benchmark_fast_path:
             scan_report = {"summary": {"benchmark_fast_path": True}}
@@ -859,8 +890,25 @@ def solve_inputs(
             "deadline_seconds": deadline_seconds,
             "cache_dir": str(selected_cache),
             "verified_paths_skipped": len(verified_paths),
+            "runner_policy": {
+                "max_cpu_seconds": runner_policy.max_cpu_seconds,
+                "max_memory_bytes": runner_policy.max_memory_bytes,
+                "max_output_bytes": runner_policy.max_output_bytes,
+            },
         }
         report = SolveReport(slots, candidates, tuple(errors), metadata)
+        if evidence_db is not None:
+            try:
+                with EvidenceStore(evidence_db) as store:
+                    metadata["evidence_store"] = persist_solve_report(
+                        store,
+                        report,
+                        solver_revision="ico-solve-1",
+                    )
+                metadata["evidence_db"] = str(Path(evidence_db).expanduser().resolve())
+            except (OSError, ValueError, sqlite3.Error) as exc:
+                errors.append(f"evidence-store: {type(exc).__name__}: {exc}")
+                report = SolveReport(slots, candidates, tuple(errors), metadata)
         if debug_dir is not None:
             (workspace / "report.json").write_text(json.dumps(report.to_dict(), ensure_ascii=False, indent=2), encoding="utf-8")
             (workspace / "adapter-evidence.json").write_text(json.dumps(_jsonable([asdict(item) for item in adapter_evidence]), ensure_ascii=False, indent=2), encoding="utf-8")
@@ -881,6 +929,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--workers", type=int, default=4, help="parallel adapter workers (1-32)")
     parser.add_argument("--deadline", type=float, help="global adapter deadline in seconds")
     parser.add_argument("--cache", type=Path, help="persistent adapter cache directory")
+    parser.add_argument("--evidence-db", type=Path, help="persist artifact provenance and candidates in SQLite")
     parser.add_argument("--tools", action="store_true", help="show all integrated tools and availability")
     parser.add_argument("--version", action="version", version="ico-solve 0.1.0")
     return parser
@@ -912,6 +961,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             workers=args.workers,
             deadline_seconds=args.deadline,
             cache_dir=args.cache,
+            evidence_db=args.evidence_db,
         )
     except (OSError, ValueError) as exc:
         print(f"ico-solve: {type(exc).__name__}: {exc}", file=sys.stderr)

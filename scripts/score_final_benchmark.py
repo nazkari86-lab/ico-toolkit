@@ -161,7 +161,12 @@ def score_report(report_path: Path, manifest_path: Path, corpus_root: Path) -> d
         "total_tasks": total_tasks,
         "verified_count": verified_count,
         "verified_score": round(verified_count / total_tasks, 6) if total_tasks else 0.0,
-        "ten_out_of_ten": verified_count == total_tasks and not false_positive_keys and len(report_task_ids) == total_tasks,
+        "ten_out_of_ten": (
+            verified_count == total_tasks
+            and not false_positive_keys
+            and duplicate_count == 0
+            and len(report_task_ids) == total_tasks
+        ),
         "false_positive_count": len(false_positive_keys),
         "false_positives": [{"task_id": task_id, "value": value} for task_id, value in sorted(false_positive_keys)],
         "duplicate_count": duplicate_count,

@@ -29,7 +29,7 @@ def _hardest_metrics_for_round(round_id: int) -> dict[str, int]:
 
 def next_round(scorecard_path: Path, current_round: int, output_root: Path, *, profile: str = "default") -> Path | None:
     score = json.loads(scorecard_path.read_text(encoding="utf-8"))
-    required = {"round_id", "total_tasks", "verified_count", "verified_score", "false_positive_count"}
+    required = {"round_id", "total_tasks", "verified_count", "verified_score", "false_positive_count", "duplicate_count"}
     if not required.issubset(score):
         return None
     if str(score.get("profile", "default")) != profile:
@@ -38,7 +38,11 @@ def next_round(scorecard_path: Path, current_round: int, output_root: Path, *, p
         return None
     if int(score["total_tasks"]) != 50 or int(score["verified_count"]) != 50:
         return None
-    if float(score["verified_score"]) != 1.0 or int(score["false_positive_count"]) != 0:
+    if (
+        float(score["verified_score"]) != 1.0
+        or int(score["false_positive_count"]) != 0
+        or int(score["duplicate_count"]) != 0
+    ):
         return None
     successor_round = int(current_round) + 1
     if profile == "hardest":

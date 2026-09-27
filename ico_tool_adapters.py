@@ -843,8 +843,16 @@ def _adapter_cache_key(
     input_sha256: str,
     task_context: str,
 ) -> tuple[str, dict[str, object]]:
+    # Cache entries must be invalidated when the adapter implementation or
+    # its parsing contract changes.  Keep the revision explicit and
+    # overridable so a release can bump it without rewriting every artifact.
+    toolkit_revision = os.environ.get(
+        "ICO_TOOLKIT_REVISION",
+        "ico-toolkit-cache-v3",
+    )
     invocation: dict[str, object] = {
-        "schema_version": 2,
+        "schema_version": 3,
+        "toolkit_revision": toolkit_revision,
         "input_sha256": input_sha256,
         "task_context": task_context,
         "adapter": profile.name,

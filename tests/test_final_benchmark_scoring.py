@@ -54,6 +54,37 @@ def test_scorecard_is_fail_closed_for_missing_manifest_tasks(tmp_path: Path) -> 
     assert len(score["missing_tasks"]) == 50
 
 
+def test_scorecard_duplicate_prevents_exact_gate(tmp_path: Path) -> None:
+    corpus = tmp_path / "corpus"
+    manifest_path = tmp_path / "expected.json"
+    manifest = generate(round_id=1, root=corpus, manifest_path=manifest_path)
+    import scripts.final_benchmark as common
+
+    candidates = [
+        {
+            "task_id": record.task_id,
+            "value": common.task_flag(1, record.story, record.family, record.difficulty),
+            "state": "candidate",
+        }
+        for record in manifest.records
+    ]
+    candidates.append(dict(candidates[0]))
+    report_path = tmp_path / "report.json"
+    report_path.write_text(
+        json.dumps(
+            {
+                "slots": [{"task_id": record.task_id} for record in manifest.records],
+                "candidates": candidates,
+            }
+        ),
+        encoding="utf-8",
+    )
+    score = score_report(report_path, manifest_path, corpus)
+    assert score["verified_count"] == 50
+    assert score["duplicate_count"] == 1
+    assert score["ten_out_of_ten"] is False
+
+
 def test_hardest_scorecard_records_chain_complexity(tmp_path: Path) -> None:
     corpus = tmp_path / "corpus"
     manifest_path = tmp_path / "expected.json"

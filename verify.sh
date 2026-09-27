@@ -6,7 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 python3 -m unittest discover -s "$ROOT/tests" -q
 pytest -q "$ROOT"/tests/test_final_benchmark_*.py
-python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py
+python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py "$ROOT"/scripts/holdout_benchmark.py
 
 for tool in binwalk pngcheck qpdf 7zz zsteg stegseek steghide exiftool foremost \
   ffuf feroxbuster gobuster hashcat hydra john nmap r2 sqlmap yara tshark vol gdb jq ffmpeg \
@@ -60,6 +60,49 @@ assert len(report["runs"]) == 2, report
 assert report["runs"][0]["selected_flags"] >= 1, report
 assert report["runs"][1]["adapter_cache_hits"] >= 1, report
 print("ico-solve benchmark smoke: OK")
+PY
+
+holdout_dir=$(mktemp -d /tmp/ico-holdout-verify.XXXXXX)
+python3 - "$holdout_dir" <<'PY'
+import hashlib
+import json
+import pathlib
+import sys
+
+root = pathlib.Path(sys.argv[1])
+def digest(value):
+    return hashlib.sha256(value.encode()).hexdigest()
+
+manifest = {
+    "schema_version": 1,
+    "name": "verify-holdout",
+    "records": [
+        {"task_id": "holdout/a", "answer_sha256": digest("ico{holdout_a}")},
+        {"task_id": "holdout/b", "answer_sha256": digest("ico{holdout_b}")},
+    ],
+}
+(root / "manifest.json").write_text(json.dumps(manifest), encoding="utf-8")
+(root / "report.json").write_text(json.dumps({
+    "candidates": [
+        {"task_id": "holdout/a", "value": "ico{holdout_a}"},
+        {"task_id": "holdout/b", "value": "ico{holdout_b}"},
+    ]
+}), encoding="utf-8")
+PY
+python3 "$ROOT/scripts/holdout_benchmark.py" \
+  --report "$holdout_dir/report.json" \
+  --manifest "$holdout_dir/manifest.json" \
+  --out "$holdout_dir/score.json" >/tmp/ico-holdout-verify.log
+python3 - "$holdout_dir/score.json" <<'PY'
+import json
+import sys
+
+score = json.load(open(sys.argv[1], encoding="utf-8"))
+assert score["verified_count"] == 2, score
+assert score["false_positive_count"] == 0, score
+assert score["duplicate_count"] == 0, score
+assert score["holdout_pass"] is True, score
+print("ico blind holdout smoke: OK")
 PY
 
 final_benchmark_dir=$(mktemp -d /tmp/ico-final-benchmark-verify.XXXXXX)

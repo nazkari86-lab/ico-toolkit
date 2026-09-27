@@ -10,6 +10,7 @@ from ico_scan_core import (
     Classification,
     CommandRunner,
     FlagMatcher,
+    RunnerPolicy,
     classify,
     encoded_views,
     sha256_file,
@@ -29,6 +30,29 @@ class FakeRunner:
 
 
 class CoreTests(unittest.TestCase):
+    def test_runner_policy_requires_positive_limits(self):
+        with self.assertRaises(ValueError):
+            RunnerPolicy(max_cpu_seconds=0)
+        with self.assertRaises(ValueError):
+            RunnerPolicy(max_memory_bytes=-1)
+        with self.assertRaises(ValueError):
+            RunnerPolicy(max_output_bytes=0)
+
+    def test_runner_policy_bounds_captured_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runner = CommandRunner(
+                Path(directory),
+                policy=RunnerPolicy(max_output_bytes=32),
+            )
+            result = runner.run(
+                [sys.executable, "-c", "print('ico{' + 'x' * 200 + '}')"],
+                cwd=Path(directory),
+                timeout=5,
+                log_name="bounded-output",
+            )
+        self.assertLessEqual(len(result.stdout.encode("utf-8")), 32 + 64)
+        self.assertIn("output truncated", result.stdout)
+
     def test_command_runner_log_paths_are_unique_when_called_concurrently(self):
         with tempfile.TemporaryDirectory() as directory:
             runner = CommandRunner(Path(directory) / "commands")

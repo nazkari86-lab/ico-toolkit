@@ -22,6 +22,7 @@ from ico_solve import (
 )
 from ico_solver_engine import SolverLimits
 from ico_tool_adapters import AdapterProfile
+from ico_evidence_store import EvidenceStore
 
 
 class IcoSolveModelTests(unittest.TestCase):
@@ -127,6 +128,7 @@ class IcoSolvePipelineTests(unittest.TestCase):
             self.assertIn("ico{base64_fixture}", {candidate.value for candidate in select_flags(report)})
             self.assertTrue((debug / "report.json").is_file())
             self.assertEqual(json.loads((debug / "report.json").read_text(encoding="utf-8"))["schema_version"], 1)
+            self.assertEqual(report.metadata["runner_policy"]["max_output_bytes"], 1_048_576)
 
     def test_collected_adapter_file_is_reprocessed_by_registry(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -152,6 +154,21 @@ class IcoSolvePipelineTests(unittest.TestCase):
                 report = solve_inputs([root], debug_dir=debug, mode="full")
             self.assertEqual({candidate.value for candidate in select_flags(report)}, {"ico{derived_registry}"})
             self.assertGreaterEqual(report.metadata["derived_solver_result_count"], 1)
+
+    def test_solve_inputs_persists_optional_evidence_database(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "crypto"
+            root.mkdir()
+            (root / "task.txt").write_text("Crypto\nDecode base64\n", encoding="utf-8")
+            (root / "cipher.txt").write_text(base64.b64encode(b"ico{stored_fixture}").decode(), encoding="ascii")
+            database = Path(directory) / "evidence.sqlite3"
+            report = solve_inputs([root], debug_dir=Path(directory) / "debug", mode="fast", evidence_db=database)
+            self.assertIn("ico{stored_fixture}", {candidate.value for candidate in select_flags(report)})
+            with EvidenceStore(database) as store:
+                snapshot = store.snapshot()
+            self.assertGreaterEqual(snapshot["counts"]["artifacts"], 1)
+            self.assertGreaterEqual(snapshot["counts"]["executions"], 1)
+            self.assertGreaterEqual(snapshot["counts"]["candidates"], 1)
 
 
 if __name__ == "__main__":
