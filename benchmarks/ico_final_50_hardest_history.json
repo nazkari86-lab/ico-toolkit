@@ -225,8 +225,78 @@
       "fragment_count": 37,
       "decoy_count": 36,
       "cycle_count": 15
+    },
+    {
+      "round_id": 17,
+      "profile": "hardest",
+      "total_tasks": 50,
+      "verified_count": 50,
+      "verified_score": 1.0,
+      "ten_out_of_ten": true,
+      "false_positive_count": 0,
+      "duplicate_count": 0,
+      "complexity": 17,
+      "fragment_count": 39,
+      "decoy_count": 38,
+      "cycle_count": 16
+    },
+    {
+      "round_id": 18,
+      "profile": "hardest",
+      "total_tasks": 50,
+      "verified_count": 50,
+      "verified_score": 1.0,
+      "ten_out_of_ten": true,
+      "false_positive_count": 0,
+      "duplicate_count": 0,
+      "complexity": 18,
+      "fragment_count": 41,
+      "decoy_count": 40,
+      "cycle_count": 17
+    },
+    {
+      "round_id": 19,
+      "profile": "hardest",
+      "total_tasks": 50,
+      "verified_count": 50,
+      "verified_score": 1.0,
+      "ten_out_of_ten": true,
+      "false_positive_count": 0,
+      "duplicate_count": 0,
+      "complexity": 19,
+      "fragment_count": 43,
+      "decoy_count": 42,
+      "cycle_count": 18
+    },
+    {
+      "round_id": 20,
+      "profile": "hardest",
+      "total_tasks": 50,
+      "verified_count": 50,
+      "verified_score": 1.0,
+      "ten_out_of_ten": true,
+      "false_positive_count": 0,
+      "duplicate_count": 0,
+      "complexity": 20,
+      "fragment_count": 45,
+      "decoy_count": 44,
+      "cycle_count": 19
+    },
+    {
+      "round_id": 21,
+      "profile": "hardest",
+      "total_tasks": 50,
+      "verified_count": 50,
+      "verified_score": 1.0,
+      "ten_out_of_ten": true,
+      "false_positive_count": 0,
+      "duplicate_count": 0,
+      "complexity": 21,
+      "fragment_count": 47,
+      "decoy_count": 46,
+      "cycle_count": 20
     }
   ],
-  "generated_successor_round": 17,
-  "generated_successor_manifest": "ico_final_50_hardest_round_17.expected.json"
+  "generated_successor_round": 22,
+  "generated_successor_manifest": "ico_final_50_hardest_round_22.expected.json"
 }
