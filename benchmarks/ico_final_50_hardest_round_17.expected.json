@@ -1,0 +1,508 @@
+{
+  "schema_version": 2,
+  "round_id": 17,
+  "seed": "20c2e19c1243868c28f30211",
+  "profile": "hardest",
+  "records": [
+    {
+      "task_id": "story_01/web_hard",
+      "story": "story_01",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_hpack_chain",
+      "description": "HPACK-like header table with keyed fragment reconstruction",
+      "answer_sha256": "b2e28b094f9c5356b3a3c6301f30d4da219de61abd6ddf7403692dec1177bf33",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/pwn_hard",
+      "story": "story_01",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_fmt_hhn",
+      "description": "format-string byte-write schedule and static evidence",
+      "answer_sha256": "4b5cc068e8f4e332f37749020ec94f7df90cfde130d3b88a2fe37cbb57640f67",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/forensics_hard",
+      "story": "story_01",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_dns_crypt",
+      "description": "out-of-order DNS labels with chained decoding",
+      "answer_sha256": "e6e3acac3ac1714d0b34035de0964a5c782e92dba5ffeeb9c39e44c5de640c15",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/reverse_hard",
+      "story": "story_01",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_vm_selfmod",
+      "description": "self-modifying bytecode and inverse state recovery",
+      "answer_sha256": "2a79cdc60e757034d5a795524b1693f992b0ab20dcf9ea6fd99f2f8d4b143f7c",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_01/crypto_hard",
+      "story": "story_01",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_rsa_crt_fault",
+      "description": "CRT fault transcript and exact recovery",
+      "answer_sha256": "0bd9a46e9cf492e34d91c0991524b92d00b52f474dcd74785c581850f806554e",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/web_hard",
+      "story": "story_02",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_jwt_jwe_split",
+      "description": "split token, compression, and nonce-derived integrity",
+      "answer_sha256": "496eb797ea19dd925fc977862b830f856219bf1be53b003a85f84a9d7659940e",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/pwn_hard",
+      "story": "story_02",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_ret2dlresolve",
+      "description": "ret2dlresolve relocation plan with keyed sections",
+      "answer_sha256": "9e74b06db1b39f035d2db254023ee76da1acca537188b10c59efbaddf26e1bbc",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/forensics_hard",
+      "story": "story_02",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_sqlite_wal",
+      "description": "WAL carving with journal order and integrity ledger",
+      "answer_sha256": "b4d44dff08896e27e9d82cd7396b5b010cc8426f003add688191d782bb6e36ea",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/reverse_hard",
+      "story": "story_02",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_opaque_cfg",
+      "description": "opaque predicates and block permutation",
+      "answer_sha256": "44a38531603a722defaa16fe5a57f771d61f12725fc4540b59b715aa2e5c7c2a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_02/crypto_hard",
+      "story": "story_02",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_ecdsa_reuse",
+      "description": "nonce-reuse signature transcript",
+      "answer_sha256": "e6991a177620bf1d0ceb57a2575ffbab48aa9485b19f16263900295f0b9ff8ba",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/web_hard",
+      "story": "story_03",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_graphql_apq",
+      "description": "persisted-query decoys with chained response transforms",
+      "answer_sha256": "7f7477ead0446609eb762869ada945a1be097183f18c2a4f2822eb22570ad437",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/pwn_hard",
+      "story": "story_03",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_heap_tcache",
+      "description": "tcache graph traversal and carved chunks",
+      "answer_sha256": "300adecfcea86fe8e68712a394756fc11bfb5c1b236d43c39e26e1dc5d9a6694",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/forensics_hard",
+      "story": "story_03",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_png_apng",
+      "description": "ancillary PNG chunks with compressed payload",
+      "answer_sha256": "e472de4d5d7a9f61bb2a0c6fbf336b09bc02184b0ae171646bd0baa904759695",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/reverse_hard",
+      "story": "story_03",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_elf_reloc",
+      "description": "relocation table with keyed data section",
+      "answer_sha256": "dc6ef358d311b970281ebc7e368156c15ba0630cc109c49d02059ad76108a6d9",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_03/crypto_hard",
+      "story": "story_03",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_lfsr_state",
+      "description": "known-plaintext LFSR state recovery",
+      "answer_sha256": "31ebdc4cea093f6336f64ba8c808946dfd8d4498f670745e4d38a54f9815e882",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/web_hard",
+      "story": "story_04",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_ws_deflate",
+      "description": "masked compressed WebSocket records",
+      "answer_sha256": "29614103e95fbe675fd21e55f53ca17137f253b8e6774cd3d125599c61b8677b",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/pwn_hard",
+      "story": "story_04",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_srop_frame",
+      "description": "sigreturn frame reconstruction from register traces",
+      "answer_sha256": "e037aa2daed44838d491b2c055d50954f2b3f377220710103b7292746ada1d6d",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/forensics_hard",
+      "story": "story_04",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_wav_lsb",
+      "description": "interleaved PCM bit-plane evidence and decoys",
+      "answer_sha256": "f2cf725b111a46de6a278bba8cf0b250b64111b39886c19997fffc7da2dc162c",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/reverse_hard",
+      "story": "story_04",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_arm64_thumb",
+      "description": "mixed instruction literal extraction",
+      "answer_sha256": "013960c9a616a67348a97351a237739b3490f2e995ce3485bc0e997ac4052b73",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_04/crypto_hard",
+      "story": "story_04",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_chacha_stream",
+      "description": "known-plaintext stream construction",
+      "answer_sha256": "7a717b87ed2b70c2691870a7e4df01e0452cf650dcc55fff6f7b4bcad130ba3b",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/web_hard",
+      "story": "story_05",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_multipart_polyglot",
+      "description": "nested multipart and polyglot body records",
+      "answer_sha256": "a270de9c6671a5cc1dfccd989cfce4c4d60dd8c33d144bc8b815ac3ca4ca07ee",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/pwn_hard",
+      "story": "story_05",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_rop_constraints",
+      "description": "constraint-satisfying gadget chain inventory",
+      "answer_sha256": "761ac76c40dabb3155c3a89e2ed9028df20554efb83ba03c973c0e74dd7b0ac5",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/forensics_hard",
+      "story": "story_05",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_pdf_objstm",
+      "description": "PDF object-stream reconstruction",
+      "answer_sha256": "7ddd53a6c3c49423255a11d0347eb44905bcfad2b3986ea03b00797d298ab052",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/reverse_hard",
+      "story": "story_05",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_dotnet_il",
+      "description": ".NET stack-machine trace",
+      "answer_sha256": "f33529c46b4f04a58e880969e1d29b9a4005f7b128c10b08946015934b1a63d4",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_05/crypto_hard",
+      "story": "story_05",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_cbc_oracle",
+      "description": "padding-oracle transcript reconstruction",
+      "answer_sha256": "aea3542cedb0716d60649ad4d0ba824a33e23cf36b8dba2804d70df4a74a797c",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/web_hard",
+      "story": "story_06",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_chunk_trailer",
+      "description": "chunk extensions, trailers, and reordered streams",
+      "answer_sha256": "a8277850ddc735e9503e9bfe5080b11c6e47845702558297d840c0952065a5ac",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/pwn_hard",
+      "story": "story_06",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_got_partial",
+      "description": "partial GOT overwrite and endian reconstruction",
+      "answer_sha256": "df50b2111f86cbfbddc460fe8c47eeaeffad91580afefd99e95d5f2d275c9399",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/forensics_hard",
+      "story": "story_06",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_memory_segments",
+      "description": "memory segment carving and pointer ordering",
+      "answer_sha256": "7ca3a974f8789bfeccf51ed387f4e2b003f60abd47a6a0ec6bc1cbec0f44692a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/reverse_hard",
+      "story": "story_06",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_wasm_stack",
+      "description": "WASM-like stack bytecode",
+      "answer_sha256": "22f528820d55e06eed43a66b9294c66bda1972bfa1568e0658dceaa68a036c0b",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_06/crypto_hard",
+      "story": "story_06",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_rsa_wiener",
+      "description": "continued-fraction private exponent recovery",
+      "answer_sha256": "b5c71031b9c82216d07e0da8d508dea151f5dcdad4df5a8760e9ed9a14aee576",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/web_hard",
+      "story": "story_07",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_redirect_cache",
+      "description": "redirect/cache transcript with split digest",
+      "answer_sha256": "042541fcb8a7a45d930bd58a8b8687a2c080ce6a38601844881a7b46eeaa40e1",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/pwn_hard",
+      "story": "story_07",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_canary_leak",
+      "description": "canary leak transcript with derived key",
+      "answer_sha256": "ac4859b5bb70485c15882489530e2fe0273b8ea2f85fc35c0ae0b085d62536fb",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/forensics_hard",
+      "story": "story_07",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_gif_extensions",
+      "description": "GIF application-extension stream",
+      "answer_sha256": "84678d2350f12c553a8097ce227ddf450f36d95bdae6f3180684acb178ec150b",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/reverse_hard",
+      "story": "story_07",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_macho_fixups",
+      "description": "Mach-O chained-fixup table",
+      "answer_sha256": "43ff35cd3a3c7636be331be8e7f98d428ba2e2b90f61c389a189fb9798274049",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_07/crypto_hard",
+      "story": "story_07",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_shamir_share",
+      "description": "threshold-share interpolation",
+      "answer_sha256": "df8dedb5d601868e8e12764a413fb0a9bc690821978e996bf14bea511684ad61",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/web_hard",
+      "story": "story_08",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_service_worker",
+      "description": "service-worker cache entries with decoys",
+      "answer_sha256": "d18509fe740258b66fb38d4f6ac000f7625ca13f1962977547e89a4e2496f422",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/pwn_hard",
+      "story": "story_08",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_uaf_vtable",
+      "description": "UAF vtable delta and object carving",
+      "answer_sha256": "638f7825a010d49b1c74d8f54c84b327da3d2d2aa41c8b3d4c7742af114ade54",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/forensics_hard",
+      "story": "story_08",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_tar_journal",
+      "description": "tar journal with deleted records and timestamps",
+      "answer_sha256": "5f4133408c4a85d8a328941e50991c2135dde02e12bfaa06fa02d04221258df4",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/reverse_hard",
+      "story": "story_08",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_vm_schedule",
+      "description": "stateful bytecode key schedule",
+      "answer_sha256": "7761af24eaeaf99789f0f143b7c3d3c94efdecfe50809d19264def347a4a6da1",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_08/crypto_hard",
+      "story": "story_08",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_dh_subgroup",
+      "description": "small-subgroup transcript",
+      "answer_sha256": "65be8a836c3a219ca882d22912bb09e2c7b5b6fd8315d2f0582044e0e5705516",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/web_hard",
+      "story": "story_09",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_http3_qpack",
+      "description": "QPACK-like indexed response blocks",
+      "answer_sha256": "6bfa12513bc5821a35ffe56a9807f7533f8b8dd1a4a715bc0bcbd2855131ee33",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/pwn_hard",
+      "story": "story_09",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_seccomp_oracle",
+      "description": "seccomp syscall trace with split payload",
+      "answer_sha256": "229aef79d23a15571931ad2598bb11d9ec922367402dc083e5c9577e6c2f39b0",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/forensics_hard",
+      "story": "story_09",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_pcap_tcp",
+      "description": "TCP sequence reassembly with compressed blocks",
+      "answer_sha256": "56184e4cc7f73a913153ee610029312fa95f8b61a7be3c18818f74751a028759",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/reverse_hard",
+      "story": "story_09",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_llvm_phi",
+      "description": "basic-block and phi-node ordering",
+      "answer_sha256": "0f7232ed5bdeabb6736df0fad8fa590f2b786c278dd46d06b2a1db0d80aa3021",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_09/crypto_hard",
+      "story": "story_09",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_hash_length",
+      "description": "length-extension evidence transcript",
+      "answer_sha256": "aa837dc35232b35292710fe414a8455a0be3d3e72ed683efb31f08919b1c1140",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/web_hard",
+      "story": "story_10",
+      "family": "web",
+      "difficulty": "hard",
+      "mechanism": "hard_web_upload",
+      "description": "upload journal with independent integrity ledger",
+      "answer_sha256": "5ac90b06fdd3553b348cb5f17ce8be0271b2048250b8e863280dc4fdc658399a",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/pwn_hard",
+      "story": "story_10",
+      "family": "pwn",
+      "difficulty": "hard",
+      "mechanism": "hard_kernel_heap",
+      "description": "kernel heap metadata and static payload plan",
+      "answer_sha256": "4d354dc23c7f81d59d3b355870d5317b83e2b7e69cd68859e519ef8518cd8a24",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/forensics_hard",
+      "story": "story_10",
+      "family": "forensics",
+      "difficulty": "hard",
+      "mechanism": "hard_fs_journal",
+      "description": "filesystem journal snapshots and hash-chain clues",
+      "answer_sha256": "d3a1f4e8f5a8b8e000f819798f382ac0a5480cee056276cf3373c8c4c0e9dbf0",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/reverse_hard",
+      "story": "story_10",
+      "family": "reverse",
+      "difficulty": "hard",
+      "mechanism": "hard_hash_gate",
+      "description": "self-hash gate with static inverse",
+      "answer_sha256": "a1e0238200527b7657407a6534ecfc4f5b2a7812cc6f6b47289e12c78dcd830e",
+      "checker": "sha256"
+    },
+    {
+      "task_id": "story_10/crypto_hard",
+      "story": "story_10",
+      "family": "crypto",
+      "difficulty": "hard",
+      "mechanism": "hard_merkle_proof",
+      "description": "Merkle proof and leaf reconstruction",
+      "answer_sha256": "d0e95ff67ad3ac64f17104f52dafde7f14d8b91d882af753895745a6f9c3396c",
+      "checker": "sha256"
+    }
+  ]
+}
