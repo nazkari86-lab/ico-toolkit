@@ -6,7 +6,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 python3 -m unittest discover -s "$ROOT/tests" -q
 pytest -q "$ROOT"/tests/test_final_benchmark_*.py
-python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py
+python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py
 
 for tool in binwalk pngcheck qpdf 7zz zsteg stegseek steghide exiftool foremost \
   ffuf feroxbuster gobuster hashcat hydra john nmap r2 sqlmap yara tshark vol gdb jq ffmpeg \

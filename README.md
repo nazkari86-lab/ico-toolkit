@@ -597,6 +597,22 @@ python3 scripts/evolve_final_benchmark.py \
   --round 1 --profile hardest --output-root benchmarks
 ```
 
+Для непрерывного цикла есть bounded-runner. Он решает и независимо оценивает
+каждый раунд, после каждого точного `50/50` создаёт следующий более сложный
+корпус и продолжает работу; при первом нарушении gate останавливается. После
+`--max-rounds` последний успешный successor уже создан, поэтому цикл можно
+безопасно продолжить следующей командой с его номером:
+
+```sh
+python3 scripts/run_final_benchmark_cycle.py \
+  --start-round 1 --max-rounds 3 --profile hardest \
+  --output-root benchmarks --run-root ico-final-runs/cycle
+```
+
+Итог каждого запуска сохраняется в `ico-final-runs/cycle/cycle-summary.json`.
+В summary отдельно записаны измеренные scorecard и созданные successor-корпуса;
+`score-gate` или `evolution-gate` означает, что новый раунд не был создан.
+
 Проверить доступность только тех optional-инструментов, которые упоминаются
 активными профилями, можно без запуска полного scan:
 
