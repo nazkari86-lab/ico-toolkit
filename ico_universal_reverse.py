@@ -855,6 +855,48 @@ def _candidate_hits(matcher: FlagMatcher, payload: bytes, source: str, analyzer:
     return hits
 
 
+_POWER_CHECK = re.compile(
+    r"__getitem__\(\s*(\d{1,6})\s*(?:\^\s*(\d{1,6}))?\s*\)"
+    r"\s*\.\s*__pow__\(\s*(\d{1,3})\s*\)"
+    r"\s*\.\s*__eq__\(\s*(\d{1,1024})\s*\)"
+)
+
+
+def recover_power_equality_checker(source: str, *, max_checks: int = 256) -> dict[str, object]:
+    """Invert independent byte^exponent equality checks without executing source.
+
+    The checked index can be a literal or the XOR of two integer literals.
+    A full contiguous set of checks and exact re-evaluation are required before
+    returning plaintext, so partial or contradictory source yields no flag.
+    """
+
+    matches = list(_POWER_CHECK.finditer(source))
+    if not matches or len(matches) > max_checks:
+        return {"status": "unsupported", "checks": len(matches)}
+    recovered: dict[int, int] = {}
+    for match in matches:
+        left, right, exponent, target = match.groups()
+        index = int(left) ^ int(right) if right is not None else int(left)
+        power, value = int(exponent), int(target)
+        if index >= max_checks or not 1 <= power <= 256:
+            return {"status": "unsupported", "checks": len(matches), "reason": "bounds"}
+        low, high = 0, 256
+        while low + 1 < high:
+            middle = (low + high) // 2
+            if pow(middle, power) <= value:
+                low = middle
+            else:
+                high = middle
+        if pow(low, power) != value:
+            return {"status": "inconsistent", "checks": len(matches), "reason": "non-exact-power"}
+        if index in recovered and recovered[index] != low:
+            return {"status": "inconsistent", "checks": len(matches), "reason": "conflicting-index"}
+        recovered[index] = low
+    if sorted(recovered) != list(range(len(recovered))):
+        return {"status": "partial", "checks": len(matches), "known_indices": len(recovered)}
+    return {"status": "verified", "checks": len(matches), "plaintext": bytes(recovered[i] for i in range(len(recovered)))}
+
+
 def recover_static_checker(path: Path, limits: SolverLimits) -> SolverResult:
     """Recover flag-shaped plaintext only from statically justified views."""
 
@@ -882,6 +924,22 @@ def recover_static_checker(path: Path, limits: SolverLimits) -> SolverResult:
         # decode because the marker identifies the operation and the result is
         # still passed through the flag matcher.
         text = data.decode("utf-8", errors="replace")
+        if path.suffix.lower() in {".py", ".pyw"}:
+            inverse = recover_power_equality_checker(text, max_checks=min(limits.max_files * 4, 256))
+            status = str(inverse["status"])
+            if status == "verified":
+                plaintext = bytes(inverse.pop("plaintext"))
+                result.candidates.extend(
+                    _candidate_hits(
+                        matcher,
+                        plaintext,
+                        str(path),
+                        "static-power-equality-inversion",
+                        verification="exact-power-checks",
+                        executed=False,
+                    )
+                )
+            result.steps.append({"name": "power-equality-inversion", "status": status, "details": inverse})
         for view in encoded_views(data, max_bytes=min(limits.max_bytes, 4 * 1024 * 1024)):
             result.candidates.extend(
                 _candidate_hits(

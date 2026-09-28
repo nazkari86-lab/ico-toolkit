@@ -176,6 +176,50 @@ def _ocr_normalize_flag_whitespace(text: str) -> str:
     return OCR_FLAG_PATTERN.sub(compact, text)
 
 
+def decode_blurred_qr(data: bytes, *, hint: str, max_pixels: int = 1_000_000, max_seconds: float = 3.0) -> dict[str, object]:
+    """Try bounded inverse-Gaussian filtering before QR decoding.
+
+    OpenCV and NumPy are optional.  A QR/blur hint limits expensive FFT work
+    to relevant images; the decoded QR payload is still checked separately by
+    the normal flag matcher.
+    """
+
+    if not re.search(r"\b(?:qr|qrcode|bar\s*code|blurr?y?|unblur)\b", hint, re.I):
+        return {"status": "not-applicable"}
+    try:
+        import cv2  # type: ignore[import-not-found]
+        import numpy as np  # type: ignore[import-not-found]
+    except ImportError:
+        return {"status": "unsupported", "reason": "opencv-python and numpy are unavailable"}
+    image = cv2.imdecode(np.frombuffer(data, dtype=np.uint8), cv2.IMREAD_GRAYSCALE)
+    if image is None or image.size > max_pixels or image.size < 21 * 21:
+        return {"status": "unsupported", "reason": "image dimensions outside QR bounds"}
+    detector = cv2.QRCodeDetector()
+    deadline = time.monotonic() + max_seconds
+    direct = detector.detectAndDecode(image)[0]
+    if direct:
+        return {"status": "decoded", "payload": direct, "method": "direct-qr"}
+    height, width = image.shape
+    frequencies = np.fft.fftfreq(height)[:, None] ** 2 + np.fft.fftfreq(width)[None, :] ** 2
+    spectrum = np.fft.fft2(image.astype(np.float32))
+    attempts = 0
+    for sigma in (3, 4, 5, 6, 7, 8):
+        transfer = np.exp(-2 * np.pi**2 * sigma**2 * frequencies)
+        for regularization in (0.0001, 0.001, 0.01):
+            if time.monotonic() >= deadline:
+                return {"status": "timeout", "attempts": attempts}
+            restored = np.real(np.fft.ifft2(spectrum * transfer / (transfer**2 + regularization)))
+            restored = np.uint8(np.clip(restored, 0, 255))
+            attempts += 1
+            payload = detector.detectAndDecode(restored)[0]
+            if payload:
+                return {
+                    "status": "decoded", "payload": payload, "method": "inverse-gaussian-qr",
+                    "sigma": sigma, "regularization": regularization, "attempts": attempts,
+                }
+    return {"status": "no-qr", "attempts": attempts}
+
+
 def _png_rgb_pixels(
     width: int,
     height: int,
@@ -650,6 +694,16 @@ class MediaSolver:
             if data.startswith(PNG_SIGNATURE):
                 width, height, channels, _pixels, chunks = _png_pixels(data)
                 result.steps.append({"name": "parse-png", "status": "ok", "details": {"width": width, "height": height, "channels": channels}})
+                qr = decode_blurred_qr(data, hint=context.task_text or "", max_seconds=min(3.0, context.limits.timeout_seconds))
+                qr_payload = str(qr.pop("payload", ""))
+                qr_hits = matcher.scan(qr_payload, source=str(context.input_path), analyzer="qr-decoder") if qr_payload else []
+                for hit in qr_hits:
+                    hit.update({"verification": "qr-decoder", "qr_method": qr.get("method")})
+                result.steps.append({"name": "qr-decode", "status": qr["status"], "details": qr})
+                if qr_hits:
+                    result.candidates.extend(qr_hits)
+                    result.status = "candidate"
+                    return result
                 for index, payload in enumerate(extract_png_planes(context.input_path, context.limits)):
                     path = _write_artifact(root, f"plane-{index:02d}.bin", payload)
                     result.artifacts.append(str(path))

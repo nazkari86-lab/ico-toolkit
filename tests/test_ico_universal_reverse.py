@@ -8,7 +8,7 @@ from pathlib import Path
 from unittest.mock import patch
 
 from ico_solver_engine import SolverContext, SolverLimits
-from ico_universal_reverse import ReverseSolver, build_static_pwn_report, inspect_native, recover_static_checker
+from ico_universal_reverse import ReverseSolver, build_static_pwn_report, inspect_native, recover_power_equality_checker, recover_static_checker
 
 
 LIMITS = SolverLimits(max_bytes=4 * 1024 * 1024, max_files=100, max_depth=2, timeout_seconds=1.0)
@@ -51,6 +51,17 @@ def _minimal_macho64(*, cpu_type: int, flags: int) -> bytes:
 
 
 class UniversalReverseTests(unittest.TestCase):
+    def test_power_equality_checker_recovers_contiguous_bytes_and_rejects_bad_power(self):
+        flag = b"ico{power_checks}"
+        clauses = " and ".join(
+            f"inp.__getitem__({index ^ 739}^739).__pow__(3).__eq__({value**3})"
+            for index, value in enumerate(flag)
+        )
+        recovered = recover_power_equality_checker(f"if {clauses}: pass")
+        self.assertEqual(recovered["status"], "verified")
+        self.assertEqual(recovered["plaintext"], flag)
+        self.assertEqual(recover_power_equality_checker(clauses.replace(str(flag[0] ** 3), str(flag[0] ** 3 + 1), 1))["status"], "inconsistent")
+
     def test_reverse_solver_does_not_route_c_or_shell_sources_to_native_parser(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

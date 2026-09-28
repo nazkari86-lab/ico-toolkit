@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import io
+import importlib.util
 import json
 import struct
 import tempfile
@@ -18,6 +19,7 @@ from ico_universal_media import (
     _normalize_vision_flag_prefix,
     extract_png_planes,
     extract_wav_bitstreams,
+    decode_blurred_qr,
 )
 
 
@@ -48,6 +50,22 @@ def _context(root: Path, source: Path, kind: str, task_text: str | None = None) 
 
 
 class UniversalMediaTests(unittest.TestCase):
+    @unittest.skipUnless(importlib.util.find_spec("cv2") and importlib.util.find_spec("numpy"), "QR backend unavailable")
+    def test_inverse_gaussian_qr_recovers_blurred_code(self):
+        import cv2
+
+        original = cv2.QRCodeEncoder_create().encode("ico{blurred_qr_fixture}")
+        scaled = cv2.resize(original, (250, 250), interpolation=cv2.INTER_NEAREST)
+        blurred = cv2.GaussianBlur(scaled, (0, 0), 6)
+        encoded, png = cv2.imencode(".png", blurred)
+        self.assertTrue(encoded)
+        decoded = decode_blurred_qr(png.tobytes(), hint="blurry QR code")
+        self.assertEqual(decoded["payload"], "ico{blurred_qr_fixture}")
+        self.assertEqual(decoded["method"], "inverse-gaussian-qr")
+
+    def test_qr_solver_skips_unhinted_image(self):
+        self.assertEqual(decode_blurred_qr(b"not an image", hint="PNG metadata")["status"], "not-applicable")
+
     def test_bit_decoder_stops_at_nul_without_materializing_all_bits(self):
         bits = [bit for value in b"ABC\x00unused" for bit in ((value >> shift) & 1 for shift in range(7, -1, -1))]
 
