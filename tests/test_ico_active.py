@@ -41,21 +41,23 @@ class ActiveClientTests(unittest.TestCase):
             with tempfile.TemporaryDirectory() as directory:
                 root = Path(directory)
                 executable = root / "runner"
-                executable.write_text("#!/bin/sh\nprintf 'ico{active_binary_fixture}\\n'\n", encoding="utf-8")
+                executable.write_text("#!/bin/sh\nread value\n[ \"$value\" = launch ] && printf 'ico{active_binary_fixture}\\n'\n", encoding="utf-8")
                 executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+                payload = root / "payload.bin"
+                payload.write_bytes(b"launch\n")
                 url = f"http://127.0.0.1:{server.server_port}/"
                 request = root / "request.sh"
                 request.write_text(f"app.get('/hidden', handler)\ncurl -X POST -d 'probe=1' {url}\n", encoding="utf-8")
                 result = run_active_task(
                     task_text="Replay the supplied service request.",
-                    task_paths=(executable, request),
+                    task_paths=(executable, payload, request),
                     task_root=root,
                     runner=CommandRunner(root / "logs", policy=RunnerPolicy(max_cpu_seconds=2, max_memory_bytes=64 * 1024 * 1024)),
                     timeout_seconds=2,
                 )
             self.assertEqual(discover_service_urls(f"See {url}."), (url,))
             self.assertEqual(len(result.requests), 3)
-            self.assertEqual(len(result.executions), 1)
+            self.assertEqual(len(result.executions), 2)
             self.assertIn("ico{active_binary_fixture}", {item["value"] for item in result.candidates})
             self.assertIn("ico{active_http_fixture}", {item["value"] for item in result.candidates})
             self.assertIn("ico{active_route_fixture}", {item["value"] for item in result.candidates})

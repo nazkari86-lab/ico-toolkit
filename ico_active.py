@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import http.client
 import json
+import hashlib
 import os
 import re
 import socket
@@ -107,6 +108,24 @@ def _runnable_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
             if not resolved.is_file() or resolved.suffix.lower() in _NON_EXECUTABLE_SUFFIXES:
                 continue
             if resolved.suffix.lower() not in _RUNNABLE_SUFFIXES or not os.access(resolved, os.X_OK):
+                continue
+        except OSError:
+            continue
+        selected.append(resolved)
+    return tuple(selected[:4])
+
+
+def _candidate_stdin_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    """Return small explicitly named payload files supplied beside a binary."""
+
+    selected: list[Path] = []
+    for path in paths:
+        try:
+            resolved = path.resolve()
+            name = resolved.name.casefold()
+            if not resolved.is_file() or resolved.stat().st_size > 64 * 1024:
+                continue
+            if not any(marker in name for marker in ("payload", "exploit", "input")):
                 continue
         except OSError:
             continue
@@ -260,40 +279,52 @@ def run_active_task(
                     template_source=str(template["source"]),
                 )
             )
+    stdin_paths = (None, *_candidate_stdin_paths(task_paths))
     for index, executable in enumerate(_runnable_paths(task_paths)):
         args = [str(executable)]
         sandboxed = False
         if sys.platform == "darwin" and Path("/usr/bin/sandbox-exec").is_file():
             args = ["/usr/bin/sandbox-exec", "-p", "(version 1) (deny network*) (allow default)", str(executable)]
             sandboxed = True
-        command = runner.run(
-            args,
-            cwd=task_root,
-            timeout=timeout_seconds,
-            log_name=f"active-local-{index:02d}",
-        )
-        combined = command.combined_output().encode("utf-8", errors="replace")
-        result.executions.append(
-            {
-                "path": str(executable),
-                "args": command.args,
-                "returncode": command.returncode,
-                "timed_out": command.timed_out,
-                "duration_seconds": command.duration_seconds,
-                "log_path": command.log_path,
-                "sandboxed": sandboxed,
-            }
-        )
-        result.candidates.extend(
-            _flag_hits(
-                matcher,
-                combined,
-                source=str(executable),
-                analyzer="active-local-execution",
-                sandboxed=sandboxed,
-                returncode=command.returncode,
+        for input_index, stdin_path in enumerate(stdin_paths):
+            try:
+                stdin = stdin_path.read_bytes() if stdin_path is not None else None
+            except OSError:
+                continue
+            command = runner.run(
+                args,
+                cwd=task_root,
+                timeout=timeout_seconds,
+                log_name=f"active-local-{index:02d}-{input_index:02d}",
+                input_bytes=stdin,
             )
-        )
+            combined = command.combined_output().encode("utf-8", errors="replace")
+            stdin_hash = hashlib.sha256(stdin).hexdigest() if stdin is not None else None
+            result.executions.append(
+                {
+                    "path": str(executable),
+                    "args": command.args,
+                    "returncode": command.returncode,
+                    "timed_out": command.timed_out,
+                    "duration_seconds": command.duration_seconds,
+                    "log_path": command.log_path,
+                    "sandboxed": sandboxed,
+                    "stdin_path": str(stdin_path) if stdin_path is not None else None,
+                    "stdin_sha256": stdin_hash,
+                }
+            )
+            result.candidates.extend(
+                _flag_hits(
+                    matcher,
+                    combined,
+                    source=str(executable),
+                    analyzer="active-local-execution",
+                    sandboxed=sandboxed,
+                    returncode=command.returncode,
+                    stdin_path=str(stdin_path) if stdin_path is not None else None,
+                    stdin_sha256=stdin_hash,
+                )
+            )
     return result
 
 
