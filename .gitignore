@@ -20,6 +20,7 @@ htmlcov/
 # Generated reports and challenge-session artifacts
 ico-scan-runs/
 ico-solve-handoffs/
+review-exports/
 ico-final-runs/
 ocr-exp2/
 corpus-matrix/
