@@ -108,6 +108,19 @@ ico-solve path/to/story --mode full --debug ./ico-solve-debug
 ico-solve --tools
 ```
 
+Для финальных сервисов и локальных бинарников включите активный режим:
+
+```sh
+ico-solve path/to/task --active --debug ./ico-solve-debug
+ico-solve path/to/task --active --service-url http://challenge-host:8080
+```
+
+Он берёт HTTP(S)-адреса из условия, исходников и явного `--service-url`,
+сохраняет каждый запрос в отчёте и ищет флаг в ответах. Предоставленные
+исполняемые файлы запускаются только с `--active`; на macOS их сеть отключена
+через sandbox, а CPU, память, вывод и время ограничены. Лимиты задаются
+`--active-request-budget` и `--active-timeout`.
+
 Для каждой задачи без локально проверенного ответа `ico-solve` автоматически
 создаёт Markdown-пrompt для GPT‑4.1 и ZIP с условием, исходными/производными
 файлами, их SHA‑256, найденными неподтверждёнными кандидатами и уже выполненными

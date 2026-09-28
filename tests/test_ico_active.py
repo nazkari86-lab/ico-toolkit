@@ -1,12 +1,16 @@
 from __future__ import annotations
 
 import http.server
+import os
+import stat
+import tempfile
 import threading
 import unittest
 from pathlib import Path
 
-from ico_active import AuthorizedClient, TargetPolicy
+from ico_active import AuthorizedClient, TargetPolicy, discover_service_urls, run_active_task
 from ico_scan import run_scan
+from ico_scan_core import CommandRunner, RunnerPolicy
 
 
 class _Handler(http.server.BaseHTTPRequestHandler):
@@ -22,6 +26,33 @@ class _Handler(http.server.BaseHTTPRequestHandler):
 
 
 class ActiveClientTests(unittest.TestCase):
+    def test_discovers_task_urls_and_captures_http_and_local_binary_flags(self):
+        server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
+        thread = threading.Thread(target=server.serve_forever, daemon=True)
+        thread.start()
+        try:
+            with tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                executable = root / "runner"
+                executable.write_text("#!/bin/sh\nprintf 'ico{active_binary_fixture}\\n'\n", encoding="utf-8")
+                executable.chmod(executable.stat().st_mode | stat.S_IXUSR)
+                url = f"http://127.0.0.1:{server.server_port}/"
+                result = run_active_task(
+                    task_text=f"Service: {url}",
+                    task_paths=(executable,),
+                    task_root=root,
+                    runner=CommandRunner(root / "logs", policy=RunnerPolicy(max_cpu_seconds=2, max_memory_bytes=64 * 1024 * 1024)),
+                    timeout_seconds=2,
+                )
+            self.assertEqual(discover_service_urls(f"See {url}."), (url,))
+            self.assertEqual(len(result.requests), 1)
+            self.assertEqual(len(result.executions), 1)
+            self.assertIn("ico{active_binary_fixture}", {item["value"] for item in result.candidates})
+        finally:
+            server.shutdown()
+            server.server_close()
+            thread.join(timeout=2)
+
     def test_allowlisted_local_request_and_budget(self):
         server = http.server.ThreadingHTTPServer(("127.0.0.1", 0), _Handler)
         thread = threading.Thread(target=server.serve_forever, daemon=True)

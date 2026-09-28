@@ -29,6 +29,7 @@ from typing import Any, Iterable, Sequence
 
 from ico_scan import run_scan
 from ico_scan_core import MAX_CAPTURE_BYTES, CommandRunner, Classification, RunnerPolicy, classify, flag_triage, sha256_file
+from ico_active import run_active_task
 from ico_scan_profiles import profiles_for
 from ico_solver_engine import SolverContext, SolverLimits
 from ico_tool_adapters import AdapterEvidence, available_tool_specs, run_adapter_profiles, tool_inventory
@@ -1445,11 +1446,17 @@ def solve_inputs(
     deadline_seconds: float | None = None,
     cache_dir: Path | None = None,
     evidence_db: Path | None = None,
+    active: bool = False,
+    service_urls: Sequence[str] = (),
+    active_request_budget: int = 12,
+    active_timeout_seconds: float = 8.0,
 ) -> SolveReport:
     """Run task-aware, universal, and extended offline adapters."""
 
     if mode not in {"fast", "full"}:
         raise ValueError(f"unsupported solve mode: {mode}")
+    if active_request_budget < 1 or active_timeout_seconds <= 0:
+        raise ValueError("active request budget and timeout must be positive")
     source_paths = tuple(Path(item).expanduser() for item in inputs)
     errors: list[str] = []
     if not source_paths:
@@ -1684,6 +1691,40 @@ def solve_inputs(
             cache_dir=selected_cache,
             context_hashes=context_hashes,
         )
+        active_results: list[dict[str, object]] = []
+        active_candidates: list[Any] = []
+        remaining_requests = active_request_budget
+        if active:
+            for slot in slots:
+                task_text = _read_text(slot.task_path, limits.max_bytes) if slot.task_path else ""
+                task_root = slot.root or (slot.task_path.parent if slot.task_path else workspace)
+                try:
+                    active_result = run_active_task(
+                        task_text=task_text,
+                        task_paths=tuple(slot.paths),
+                        task_root=task_root,
+                        runner=runner,
+                        explicit_urls=tuple(service_urls),
+                        request_budget=max(1, remaining_requests),
+                        timeout_seconds=active_timeout_seconds,
+                    )
+                except Exception as exc:
+                    errors.append(f"active task {slot.task_id}: {type(exc).__name__}: {exc}")
+                    continue
+                remaining_requests = max(0, remaining_requests - len(active_result.requests))
+                for candidate in active_result.candidates:
+                    candidate.update(
+                        {
+                            "task_id": slot.task_id,
+                            "story_id": slot.story_id,
+                            "family": slot.family,
+                            "artifact": candidate.get("source", str(task_root)),
+                        }
+                    )
+                active_results.append({"task_id": slot.task_id, **active_result.to_dict()})
+                active_candidates.append(
+                    SimpleNamespace(solver="active-runtime", category=slot.family, candidates=active_result.candidates)
+                )
         result_objects: list[Any] = []
         result_objects.extend(prompt_results)
         scan_candidates = scan_report.get("candidates", []) if isinstance(scan_report, dict) else []
@@ -1699,6 +1740,7 @@ def solve_inputs(
             )
         for derived_result in derived_solver_results:
             result_objects.append(derived_result)
+        result_objects.extend(active_candidates)
         candidates = rank_candidates(result_objects, slots)
         metadata = {
             "mode": mode,
@@ -1726,6 +1768,13 @@ def solve_inputs(
             "deadline_seconds": deadline_seconds,
             "cache_dir": str(selected_cache),
             "verified_paths_skipped": len(verified_paths),
+            "active": {
+                "enabled": active,
+                "service_urls": list(service_urls),
+                "request_budget": active_request_budget,
+                "timeout_seconds": active_timeout_seconds,
+                "results": active_results,
+            },
             "runner_policy": {
                 "max_cpu_seconds": runner_policy.max_cpu_seconds,
                 "max_memory_bytes": runner_policy.max_memory_bytes,
@@ -1784,6 +1833,10 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deadline", type=float, help="global solve deadline shared between scanning and adapter workers")
     parser.add_argument("--cache", type=Path, help="persistent adapter cache directory")
     parser.add_argument("--evidence-db", type=Path, help="persist artifact provenance and candidates in SQLite")
+    parser.add_argument("--active", action="store_true", help="probe task-service URLs and execute provided runnable binaries")
+    parser.add_argument("--service-url", action="append", default=[], help="task-service URL when it is absent from the supplied files")
+    parser.add_argument("--active-request-budget", type=int, default=12, help="maximum active HTTP requests across the solve")
+    parser.add_argument("--active-timeout", type=float, default=8.0, help="timeout in seconds for each active request or local execution")
     parser.add_argument("--tools", action="store_true", help="show all integrated tools and availability")
     parser.add_argument("--version", action="version", version="ico-solve 0.1.0")
     return parser
@@ -1806,6 +1859,8 @@ def main(argv: Sequence[str] | None = None) -> int:
         _build_parser().error("--workers must be between 1 and 32")
     if args.deadline is not None and args.deadline <= 0:
         _build_parser().error("--deadline must be positive")
+    if args.active_request_budget < 1 or args.active_timeout <= 0:
+        _build_parser().error("active limits must be positive")
     try:
         handoff_dir = args.handoff_dir
         if handoff_dir is None:
@@ -1824,6 +1879,10 @@ def main(argv: Sequence[str] | None = None) -> int:
             deadline_seconds=args.deadline,
             cache_dir=args.cache,
             evidence_db=args.evidence_db,
+            active=args.active,
+            service_urls=tuple(args.service_url),
+            active_request_budget=args.active_request_budget,
+            active_timeout_seconds=args.active_timeout,
         )
     except (OSError, ValueError) as exc:
         print(f"ico-solve: {type(exc).__name__}: {exc}", file=sys.stderr)

@@ -10,10 +10,21 @@ from __future__ import annotations
 
 import http.client
 import json
+import os
+import re
 import socket
+import sys
 from dataclasses import dataclass, field
+from pathlib import Path
 from typing import Mapping
 from urllib.parse import urlsplit
+
+from ico_scan_core import CommandRunner, FlagMatcher
+
+
+_SERVICE_URL = re.compile(r"https?://[^\s<>'\"`\\]+", re.IGNORECASE)
+_RUNNABLE_SUFFIXES = {"", ".bin", ".elf", ".exe", ".out"}
+_NON_EXECUTABLE_SUFFIXES = {".so", ".dylib", ".a", ".o", ".py", ".pyc", ".js", ".wasm"}
 
 
 @dataclass(frozen=True)
@@ -48,6 +59,149 @@ class ResponseRecord:
             "body": self.body.decode("utf-8", errors="replace"),
             "error": self.error,
         }
+
+
+@dataclass
+class ActiveTaskResult:
+    """Captured evidence from an opt-in live task pass."""
+
+    endpoints: list[str] = field(default_factory=list)
+    requests: list[dict[str, object]] = field(default_factory=list)
+    executions: list[dict[str, object]] = field(default_factory=list)
+    candidates: list[dict[str, object]] = field(default_factory=list)
+
+    def to_dict(self) -> dict[str, object]:
+        return {
+            "endpoints": self.endpoints,
+            "requests": self.requests,
+            "executions": self.executions,
+            "candidates": self.candidates,
+        }
+
+
+def discover_service_urls(task_text: str, explicit_urls: tuple[str, ...] = ()) -> tuple[str, ...]:
+    """Return task-service URLs found in a statement or supplied explicitly."""
+
+    urls: list[str] = []
+    for raw in [*explicit_urls, *_SERVICE_URL.findall(task_text)]:
+        value = raw.rstrip(".,;:!?)\\]}\"")
+        parsed = urlsplit(value)
+        if parsed.scheme in {"http", "https"} and parsed.hostname and value not in urls:
+            urls.append(value)
+    return tuple(urls)
+
+
+def _flag_hits(matcher: FlagMatcher, payload: bytes, *, source: str, analyzer: str, **extra: object) -> list[dict[str, object]]:
+    hits = matcher.scan(payload.decode("utf-8", errors="replace"), source=source, analyzer=analyzer)
+    for hit in hits:
+        hit.update({"state": "transcript-derived", "verification": "active-captured-output", **extra})
+    return hits
+
+
+def _runnable_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
+    selected: list[Path] = []
+    for path in paths:
+        try:
+            resolved = path.resolve()
+            if not resolved.is_file() or resolved.suffix.lower() in _NON_EXECUTABLE_SUFFIXES:
+                continue
+            if resolved.suffix.lower() not in _RUNNABLE_SUFFIXES or not os.access(resolved, os.X_OK):
+                continue
+        except OSError:
+            continue
+        selected.append(resolved)
+    return tuple(selected[:4])
+
+
+def run_active_task(
+    *,
+    task_text: str,
+    task_paths: tuple[Path, ...],
+    task_root: Path,
+    runner: CommandRunner,
+    explicit_urls: tuple[str, ...] = (),
+    request_budget: int = 12,
+    timeout_seconds: float = 8.0,
+) -> ActiveTaskResult:
+    """Probe discovered task services and execute provided binaries on demand.
+
+    The caller opts in through ``ico-solve --active``. HTTP targets are only
+    URLs from the task statement or explicit CLI values. On macOS local native
+    binaries run under a temporary sandbox profile that denies their network
+    access; network interaction belongs to the recorded HTTP client instead.
+    """
+
+    if request_budget < 1 or timeout_seconds <= 0:
+        raise ValueError("active request budget and timeout must be positive")
+    result = ActiveTaskResult()
+    source_texts = [task_text]
+    for path in task_paths:
+        try:
+            if path.is_file() and path.stat().st_size <= 256 * 1024:
+                source_texts.append(path.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+    endpoints = discover_service_urls("\n".join(source_texts), explicit_urls)
+    result.endpoints.extend(endpoints)
+    matcher = FlagMatcher()
+    hosts = tuple(dict.fromkeys(urlsplit(url).hostname.lower() for url in endpoints if urlsplit(url).hostname))
+    if hosts:
+        client = AuthorizedClient(
+            TargetPolicy(
+                allowed_hosts=hosts,
+                blocked_hosts=(),
+                max_requests=min(request_budget, len(endpoints)),
+                timeout_seconds=timeout_seconds,
+            )
+        )
+        for url in endpoints:
+            response = client.request("GET", url)
+            record = response.to_dict()
+            result.requests.append(record)
+            result.candidates.extend(
+                _flag_hits(
+                    matcher,
+                    response.body,
+                    source=url,
+                    analyzer="active-http-get",
+                    http_status=response.status,
+                )
+            )
+    for index, executable in enumerate(_runnable_paths(task_paths)):
+        args = [str(executable)]
+        sandboxed = False
+        if sys.platform == "darwin" and Path("/usr/bin/sandbox-exec").is_file():
+            args = ["/usr/bin/sandbox-exec", "-p", "(version 1) (deny network*) (allow default)", str(executable)]
+            sandboxed = True
+        command = runner.run(
+            args,
+            cwd=task_root,
+            timeout=timeout_seconds,
+            log_name=f"active-local-{index:02d}",
+        )
+        combined = command.combined_output().encode("utf-8", errors="replace")
+        result.executions.append(
+            {
+                "path": str(executable),
+                "args": command.args,
+                "returncode": command.returncode,
+                "timed_out": command.timed_out,
+                "duration_seconds": command.duration_seconds,
+                "log_path": command.log_path,
+                "sandboxed": sandboxed,
+            }
+        )
+        result.candidates.extend(
+            _flag_hits(
+                matcher,
+                combined,
+                source=str(executable),
+                analyzer="active-local-execution",
+                sandboxed=sandboxed,
+                returncode=command.returncode,
+            )
+        )
+    return result
 
 
 def _host_allowed(host: str, policy: TargetPolicy) -> bool:
@@ -107,4 +261,3 @@ class AuthorizedClient:
         finally:
             connection.close()
         return record
-

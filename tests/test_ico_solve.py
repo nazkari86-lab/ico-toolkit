@@ -4,6 +4,7 @@ import base64
 import hashlib
 import io
 import json
+import stat
 import sys
 import tempfile
 import unittest
@@ -33,6 +34,25 @@ from ico_evidence_store import EvidenceStore
 
 
 class IcoSolveModelTests(unittest.TestCase):
+    def test_active_mode_promotes_flag_emitted_by_local_binary(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / "story_01" / "reverse_easy"
+            root.mkdir(parents=True)
+            (root / "task.txt").write_text("Family: Reverse\nDifficulty: Easy\nRun the supplied checker.\n", encoding="utf-8")
+            binary = root / "checker"
+            binary.write_text("#!/bin/sh\nprintf 'ico{active_solve_fixture}\\n'\n", encoding="utf-8")
+            binary.chmod(binary.stat().st_mode | stat.S_IXUSR)
+            report = solve_inputs(
+                [root],
+                debug_dir=Path(directory) / "debug",
+                mode="fast",
+                workers=1,
+                active=True,
+                active_timeout_seconds=2,
+            )
+        self.assertIn("ico{active_solve_fixture}", {candidate.value for candidate in report.candidates})
+        self.assertTrue(report.metadata["active"]["enabled"])
+
     def test_global_deadline_reserves_time_for_adapter_workers(self):
         self.assertEqual(_scan_budget_for_deadline(180, "fast"), 120)
         self.assertEqual(_scan_budget_for_deadline(180, "full"), 117)
