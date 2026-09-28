@@ -1,0 +1,316 @@
+{
+  "revision": "4a1b779026c3b69a71bef1c8c29eb2e9f8dbee7e",
+  "tasks": [
+    {
+      "task_id": "ictf23/crypto/elliptic",
+      "source": "Crypto/elliptic",
+      "distribution": [
+        {
+          "name": "elliptic",
+          "sha256": "d693043c93f62c48bfcc75e4b11ce95219aed1f7642532b1e956dbc29ea282b0",
+          "bytes": 26856
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/flagtor",
+      "source": "Crypto/flagtor",
+      "distribution": [
+        {
+          "name": "flagtor.factor",
+          "sha256": "ad608311482993a102a898174b9712bf5b6d7f6e5a23b7026d1fef0baf64185f",
+          "bytes": 1108
+        },
+        {
+          "name": "out.txt",
+          "sha256": "16556c0c52257ff52c9776b02af2bf308c5d4fbc7f792a7ffa3744533fa27524",
+          "bytes": 5477
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/imaginary-casino",
+      "source": "Crypto/imaginary_casino",
+      "distribution": [
+        {
+          "name": "server.py",
+          "sha256": "447d8018e88833dbed4476cfca1a3e279222f7d9ee02d99eec4931f9eba1d99d",
+          "bytes": 3414
+        },
+        {
+          "name": "csidh-latest.tar.xz",
+          "sha256": "565d33a8fd28f99fa1d6f6189ae965834fb599e97a4aadde20106dc65fad380f",
+          "bytes": 30904
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/signer",
+      "source": "Crypto/signer",
+      "distribution": [
+        {
+          "name": "main.py",
+          "sha256": "58074572fcdaaf9b6ddc216d960783f1a1fb0ad870b79fb64234f87948d75ef9",
+          "bytes": 1399
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/sus",
+      "source": "Crypto/sus",
+      "distribution": [
+        {
+          "name": "challenge.py",
+          "sha256": "bd59ca1451c277f390fcee22c7430f1dbbfcbb22d6175a4e5d3d918820c9ce12",
+          "bytes": 408
+        },
+        {
+          "name": "output.txt",
+          "sha256": "e1587eab8bfe185cd07684204f8719942b3f393690ca3ca69376c11df9584e78",
+          "bytes": 1868
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/tan",
+      "source": "Crypto/tan",
+      "distribution": [
+        {
+          "name": "tan.sage",
+          "sha256": "ed94f74319d1f3df8916b7456bd824db32c288f507373fc60442ac1d0c590e66",
+          "bytes": 394
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/crypto/wasteful",
+      "source": "Crypto/wasteful",
+      "distribution": [
+        {
+          "name": "chall.py",
+          "sha256": "5943242e0eceb4a985f741eacfde5ffaabbfb0c586e316ffd05e135e5b2ee5e9",
+          "bytes": 702
+        },
+        {
+          "name": "output.txt",
+          "sha256": "7d7f418f9ebb6a6350498a7e4886b0e65e26f890dae59133fd718a5cd0915e2c",
+          "bytes": 2071
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/forensics/blurry",
+      "source": "Forensics/blurry",
+      "distribution": [
+        {
+          "name": "chall.png",
+          "sha256": "7283bb5c334466e92d689674be1229e3cbb682b08369c4831098cabee22ea075",
+          "bytes": 212708
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/forensics/crypto",
+      "source": "Forensics/crypto",
+      "distribution": [
+        {
+          "name": "crypto.zip",
+          "sha256": "b8abf95a0524764a4921649e600b7f707c4e6aa459d6422ccd889523036c99ea",
+          "bytes": 2537751
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/forensics/steganographic",
+      "source": "Forensics/steganographic",
+      "distribution": [
+        {
+          "name": "chall.png",
+          "sha256": "395308ac31d288de07e81ff7cc9d812fd5a36d8e52ea3b38da37d8910076615a",
+          "bytes": 3074374
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/forensics/web",
+      "source": "Forensics/web",
+      "distribution": [
+        {
+          "name": "web.zip",
+          "sha256": "761a8d381bce954a0c8d9b13f687aa8059d8ffccb533235ded1e7720c16097ed",
+          "bytes": 5793147
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/form",
+      "source": "Pwn/form",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "0a7e2e31200af958455e5ad4fa31f05581e98115aa0867b1b4e6db57c0edeac0",
+          "bytes": 16304
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/lcode",
+      "source": "Pwn/lcode",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "5e311e443f621db7f31381f0e520742bf0ca649d1b4a70d02a4c1533242cd593",
+          "bytes": 16544
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/mailman",
+      "source": "Pwn/mailman",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "12f6001a400c47c11baa566d15cb9d673694e8950535db703152e64b62f75471",
+          "bytes": 16568
+        },
+        {
+          "name": "libc.so.6",
+          "sha256": "568740b06a8afa26db4874f8cf61985ecbc6dd127f4229416fe95da8f9ec13fb",
+          "bytes": 2216304
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/minimal",
+      "source": "Pwn/minimal",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "16bde75717a25f38c6ef0b0b8b4dca143c55cd952b7f7557b99fb567be292514",
+          "bytes": 15896
+        },
+        {
+          "name": "Dockerfile",
+          "sha256": "6d7c488f7e3374818f38d3043fe554c95968b43fe28fb3dba5bbb1f27c0f489a",
+          "bytes": 154
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/minimaler",
+      "source": "Pwn/minimaler",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "4f6604787b7003949651b0d1eda570f2afa6f92415eccecf2b7f8dbf897a4eb4",
+          "bytes": 15896
+        },
+        {
+          "name": "Dockerfile",
+          "sha256": "679c417bcfac8c0cb137a685c257c70b8fbdd638cf9474c7c1283d7d4ad89444",
+          "bytes": 230
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/ret2lose",
+      "source": "Pwn/ret2lose",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "e12c40bfd6dae3d99b9ab44fa585959603854d7cdf52291133e5694f55a28f92",
+          "bytes": 15968
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/ret2win",
+      "source": "Pwn/ret2win",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "e12c40bfd6dae3d99b9ab44fa585959603854d7cdf52291133e5694f55a28f92",
+          "bytes": 15968
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/vault",
+      "source": "Pwn/vault",
+      "distribution": [
+        {
+          "name": "vuln",
+          "sha256": "301f8a273c1fe5bf662de9ea49208a4824b3ee4b14bcdf545fbdf845f92486bd",
+          "bytes": 26760
+        },
+        {
+          "name": "libc.so.6",
+          "sha256": "568740b06a8afa26db4874f8cf61985ecbc6dd127f4229416fe95da8f9ec13fb",
+          "bytes": 2216304
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/pwn/window-of-opportunity",
+      "source": "Pwn/window-of-opportunity",
+      "distribution": [
+        {
+          "name": "opportunity_dist.zip",
+          "sha256": "226e27a16888979eb5ee16d3d7e32f76783f19546d52f46f5f3383439b94e77e",
+          "bytes": 13933825
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/reverse/chaos",
+      "source": "Reversing/chaos",
+      "distribution": [
+        {
+          "name": "chall.py",
+          "sha256": "e2d9c4674198dbbe1e4e0c4e2aeff2020cfb6b7f0a560c9f20c3f7767e8ee783",
+          "bytes": 66191
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/reverse/scrambled",
+      "source": "Reversing/scrambled",
+      "distribution": [
+        {
+          "name": "main",
+          "sha256": "65100ca550ff72801c930c2ca54c80892746fdf884b0c75df000c75577308104",
+          "bytes": 1963256
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/reverse/snailchecker",
+      "source": "Reversing/snailchecker",
+      "distribution": [
+        {
+          "name": "check.py",
+          "sha256": "3ffe86a5698964dd1f4d91dcd4eda1ecdaae6d25b2d918595e622a876ffba77e",
+          "bytes": 735
+        }
+      ]
+    },
+    {
+      "task_id": "ictf23/reverse/vmcastle",
+      "source": "Reversing/vmcastle",
+      "distribution": [
+        {
+          "name": "vm",
+          "sha256": "0a4e848119d3ce03a9b3af7e0481aa2342c292fe936d141309a5fa805115650c",
+          "bytes": 20632
+        },
+        {
+          "name": "out",
+          "sha256": "016f71b1d90abc4cb68bbf826e6696aa8e242a914c91d5f20833f3da61567dc7",
+          "bytes": 180762
+        }
+      ]
+    }
+  ],
+  "source_url": "https://github.com/ImaginaryCTF/ImaginaryCTF-2023-Challenges",
+  "scope": "Official files listed under Distribution; Description only; flag.txt, solutions and generators excluded from solver input."
+}

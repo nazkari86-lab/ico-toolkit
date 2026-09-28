@@ -1,5 +1,11 @@
 # ICO/CTF toolkit for Apple Silicon
 
+**Реальный внешний замер:** на 24 официальных задачах ImaginaryCTF 2023
+автономный файловый режим дал **0 подтверждённых флагов из 24**; отдельный
+офлайн-поднабор — **0/12**. См. [условия проверки, времена и ограничения](docs/research/2026-09-28-imaginaryctf-2023-baseline.md).
+Количество установленных инструментов и локальные регрессионные фикстуры не
+показывают вероятность решения новых задач.
+
 **Для ревью в Claude и других ИИ:** [инструкция и прямые ссылки на исходники](AI_REVIEW.md).
 Если ИИ не может переходить по ссылкам или клонировать репозиторий, создайте
 компактные вложения: `python3 scripts/package_review.py --out review-exports/claude`.
@@ -649,102 +655,9 @@ python3 scripts/run_corpus_matrix.py \
 ошибки/таймауты инструментов и `coverage` по task-root, семейству и сложности.
 Пропуски отсутствующих optional-инструментов не считаются ошибками.
 
-Для заявленной структуры финального отбора есть локальная synthetic-матрица:
-три истории × пять семейств (`web`, `pwn`, `forensics`, `reverse`, `crypto`) ×
-три уровня (`easy`, `medium`, `hard`) плюс пять отрицательных fixtures. Это
-регрессионный corpus поддержанных преобразований, а не обещание решить любую
-неизвестную live-задачу. Его можно пересоздать и проверить так:
-
-```sh
-python3 scripts/generate_story_matrix.py
-python3 -m unittest tests.test_ico_universal_integration -v
-python3 scripts/run_corpus_matrix.py benchmarks/ico_story_matrix \
-  --out ./ico-scan-runs/story-matrix
-```
-
-Матрица ожидает 45 положительных case roots и пять negative roots. Для web
-значения отмечаются как `transcript-derived`, для детерминированных offline
-преобразований как `candidate`, а статический pwn/reverse материал без флага как
-`payload-ready`. Negative fixtures должны оставаться без candidate.
-
-Для отдельной проверки формата финала есть детерминированный набор из 50 задач:
-10 историй × 5 категорий (`web`, `pwn`, `forensics`, `reverse`, `crypto`).
-Ожидаемые ответы лежат только во внешнем hash-manifest; они не входят в
-каталог, который читает solver. Генерация, решение и независимый scorecard:
-
-```sh
-python3 scripts/generate_final_benchmark.py --round 1
-./ico-solve benchmarks/ico_final_50 --mode fast --workers 4 \
-  --deadline 120 --debug ico-final-runs/round-01
-python3 scripts/score_final_benchmark.py \
-  --report ico-final-runs/round-01/report.json \
-  --manifest benchmarks/ico_final_50.expected.json \
-  --corpus benchmarks/ico_final_50 \
-  --out ico-final-runs/round-01/scorecard.json
-```
-
-Score `10/10` означает ровно `50/50` hash/checker-verified задач, полный
-набор task IDs и ноль false positives. `candidate`, `candidate-review` и
-`payload-ready` считаются прогрессом, но не точным решением. Все артефакты
-этого набора синтетические и офлайн; это измерение toolkit, а не прогноз
-реального финала.
-
-После доказанного `50/50` можно создать ровно один усложнённый раунд. Gate
-fail-closed и ничего не создаёт при неполном score:
-
-```sh
-python3 scripts/evolve_final_benchmark.py \
-  --scorecard ico-final-runs/round-01/scorecard.json \
-  --round 1 --output-root benchmarks
-```
-
-Каждый следующий раунд сохраняет 50 задач, меняет seed и добавляет слои/
-декои к evidence. Внешний scorer нужно запускать заново для каждого раунда;
-бинарники и сервисы задач не запускаются.
-
-Для стресс-проверки решателя есть отдельный профиль `hardest`. В нём все 50
-подзадач имеют уровень `hard`, а evidence проходит через семейный этап и
-многошаговую цепочку: nonce-derived key, rolling transform, byte rotation,
-seeded permutation, zlib, base85 и фрагментацию. Для каждой задачи создаются
-шесть правдоподобных декоев; контрольный digest разделён между файлами
-`chain.json` и `checksum.txt`. Контейнеры отличаются по семействам (NDJSON,
-ELF-like static blob, carve stream, VM trace и crypto bundle), но challenge
-артефакты остаются офлайн и не исполняются:
-
-```sh
-python3 scripts/generate_final_benchmark.py --round 1 --profile hardest
-./ico-solve benchmarks/ico_final_50_hardest_round_01 --mode fast --workers 4 \
-  --deadline 120 --debug ico-final-runs/hardest-round-01
-python3 scripts/score_final_benchmark.py \
-  --report ico-final-runs/hardest-round-01/report.json \
-  --manifest benchmarks/ico_final_50_hardest_round_01.expected.json \
-  --corpus benchmarks/ico_final_50_hardest_round_01 \
-  --out ico-final-runs/hardest-round-01/scorecard.json
-```
-
-Следующий hard-раунд создаётся только из точного `50/50`:
-
-```sh
-python3 scripts/evolve_final_benchmark.py \
-  --scorecard ico-final-runs/hardest-round-01/scorecard.json \
-  --round 1 --profile hardest --output-root benchmarks
-```
-
-Для непрерывного цикла есть bounded-runner. Он решает и независимо оценивает
-каждый раунд, после каждого точного `50/50` создаёт следующий более сложный
-корпус и продолжает работу; при первом нарушении gate останавливается. После
-`--max-rounds` последний успешный successor уже создан, поэтому цикл можно
-безопасно продолжить следующей командой с его номером:
-
-```sh
-python3 scripts/run_final_benchmark_cycle.py \
-  --start-round 1 --max-rounds 3 --profile hardest \
-  --output-root benchmarks --run-root ico-final-runs/cycle
-```
-
-Итог каждого запуска сохраняется в `ico-final-runs/cycle/cycle-summary.json`.
-В summary отдельно записаны измеренные scorecard и созданные successor-корпуса;
-`score-gate` или `evolution-gate` означает, что новый раунд не был создан.
+Для оценки качества используйте только внешние задачи с зафиксированными
+ответами и отдельным контрольным списком. Локальные регрессионные фикстуры
+проверяют отдельные функции, но не измеряют вероятность решения нового CTF.
 
 Проверить полный реестр optional-инструментов, backend и ограничения
 offline/local-only можно без запуска полного scan. Скрипт не вызывает

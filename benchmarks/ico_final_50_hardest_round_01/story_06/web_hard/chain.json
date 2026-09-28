@@ -1,1 +1,0 @@
-{"version":1,"family":"web","mechanism":"hard_chunk_trailer","nonce":"3be8364c2864c8f2f5aa7f45","variant":6,"anchor_prefix":"774f5ccf7b9ce14b","key_tag":"00c8026921f4c865","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"web-block-xor","family_param":{"block":3},"complexity":1,"cycle_count":0,"cycle_params":[]}

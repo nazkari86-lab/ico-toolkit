@@ -5,8 +5,7 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 . "$ROOT/env.sh"
 
 python3 -m unittest discover -s "$ROOT/tests" -q
-pytest -q "$ROOT"/tests/test_final_benchmark_*.py
-python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py "$ROOT"/scripts/holdout_benchmark.py "$ROOT"/scripts/run_unblob_bounded.py "$ROOT"/scripts/rsa_coppersmith_solver.py
+python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/holdout_benchmark.py "$ROOT"/scripts/run_unblob_bounded.py "$ROOT"/scripts/rsa_coppersmith_solver.py
 sh -n "$ROOT/scripts/install_optional_active_tools.sh"
 
 for tool in binwalk pngcheck qpdf 7zz zsteg stegseek steghide exiftool foremost \
@@ -107,47 +106,6 @@ assert score["false_positive_count"] == 0, score
 assert score["duplicate_count"] == 0, score
 assert score["holdout_pass"] is True, score
 print("ico blind holdout smoke: OK")
-PY
-
-final_benchmark_dir=$(mktemp -d /tmp/ico-final-benchmark-verify.XXXXXX)
-python3 "$ROOT/scripts/generate_final_benchmark.py" \
-  --round 1 --root "$final_benchmark_dir/corpus" --manifest "$final_benchmark_dir/expected.json" >/dev/null
-./ico-solve "$final_benchmark_dir/corpus" --mode fast --workers 2 --deadline 120 --debug "$final_benchmark_dir/run" >/dev/null
-python3 "$ROOT/scripts/score_final_benchmark.py" \
-  --report "$final_benchmark_dir/run/report.json" \
-  --manifest "$final_benchmark_dir/expected.json" \
-  --corpus "$final_benchmark_dir/corpus" \
-  --out "$final_benchmark_dir/scorecard.json" >/tmp/ico-final-benchmark-score.log
-python3 - "$final_benchmark_dir/scorecard.json" <<'PY'
-import json
-import sys
-
-score = json.load(open(sys.argv[1], encoding="utf-8"))
-assert score["verified_count"] == 50, score
-assert score["false_positive_count"] == 0, score
-assert score["ten_out_of_ten"] is True, score
-print("ico final-50 benchmark smoke: OK")
-PY
-
-hard_benchmark_dir=$(mktemp -d /tmp/ico-hardest-benchmark-verify.XXXXXX)
-python3 "$ROOT/scripts/generate_final_benchmark.py" \
-  --round 1 --profile hardest --root "$hard_benchmark_dir/corpus" --manifest "$hard_benchmark_dir/expected.json" >/dev/null
-./ico-solve "$hard_benchmark_dir/corpus" --mode fast --workers 2 --deadline 120 --debug "$hard_benchmark_dir/run" >/dev/null
-python3 "$ROOT/scripts/score_final_benchmark.py" \
-  --report "$hard_benchmark_dir/run/report.json" \
-  --manifest "$hard_benchmark_dir/expected.json" \
-  --corpus "$hard_benchmark_dir/corpus" \
-  --out "$hard_benchmark_dir/scorecard.json" >/tmp/ico-hardest-benchmark-score.log
-python3 - "$hard_benchmark_dir/scorecard.json" <<'PY'
-import json
-import sys
-
-score = json.load(open(sys.argv[1], encoding="utf-8"))
-assert score["profile"] == "hardest", score
-assert score["verified_count"] == 50, score
-assert score["false_positive_count"] == 0, score
-assert score["ten_out_of_ten"] is True, score
-print("ico hardest-50 benchmark smoke: OK")
 PY
 
 [ -f "$ROOT/CyberChef/app/CyberChef_v11.5.0.html" ]

@@ -1,1 +1,0 @@
-{"version":1,"family":"crypto","mechanism":"hard_shamir_share","nonce":"df57f8287a594951d32d9649","variant":11,"anchor_prefix":"506e995037fbb5d0","key_tag":"b7d877e36b5d35de","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":5,"add":99},"complexity":1,"cycle_count":0,"cycle_params":[]}

@@ -1,1 +1,0 @@
-Synthetic crypto medium evidence for story story_03; known-key XOR.

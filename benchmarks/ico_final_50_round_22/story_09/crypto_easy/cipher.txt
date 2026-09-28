@@ -1,2 +1,0 @@
-rails=3
-data=aWZsMl9fMTE3NzJje2lhXzJfOWN5NGZmMTVmM2VjM31vbnIwcmQxMmY3

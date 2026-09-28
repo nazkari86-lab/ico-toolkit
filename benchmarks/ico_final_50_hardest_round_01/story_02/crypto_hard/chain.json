@@ -1,1 +1,0 @@
-{"version":1,"family":"crypto","mechanism":"hard_ecdsa_reuse","nonce":"af5e918e96d64f268063d919","variant":12,"anchor_prefix":"07120b570a7dc833","key_tag":"9104e366839f061f","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":7,"add":173},"complexity":1,"cycle_count":0,"cycle_params":[]}

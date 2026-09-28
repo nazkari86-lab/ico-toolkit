@@ -1,1 +1,0 @@
-Synthetic negative crypto case with no derivable answer.

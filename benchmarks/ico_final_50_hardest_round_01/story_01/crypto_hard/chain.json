@@ -1,1 +1,0 @@
-{"version":1,"family":"crypto","mechanism":"hard_rsa_crt_fault","nonce":"df62381b35ca4c4ba4793ad9","variant":11,"anchor_prefix":"fed048e8ca1d7674","key_tag":"59b1987ac858b158","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":5,"add":9},"complexity":1,"cycle_count":0,"cycle_params":[]}

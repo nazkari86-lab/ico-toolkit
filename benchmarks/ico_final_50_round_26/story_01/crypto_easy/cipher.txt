@@ -1,3 +1,0 @@
-shift=7
-noise=__--__
-cipher=pjv{mpuhs_y26_01_jyf_54k601l44641099mm2l2}

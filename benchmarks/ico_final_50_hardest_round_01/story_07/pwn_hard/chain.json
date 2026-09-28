@@ -1,1 +1,0 @@
-{"version":1,"family":"pwn","mechanism":"hard_canary_leak","nonce":"bb32278f8077e7ceaf54d00f","variant":7,"anchor_prefix":"e7611c2c4ff65707","key_tag":"0276f8ee3c05c960","fragment_count":7,"flip_mask":[false,false,true,false,false,true,false],"decoys":6,"family_stage":"pwn-endian-delta","family_param":{"block":4},"complexity":1,"cycle_count":0,"cycle_params":[]}

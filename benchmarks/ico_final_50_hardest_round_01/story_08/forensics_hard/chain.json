@@ -1,1 +1,0 @@
-{"version":1,"family":"forensics","mechanism":"hard_tar_journal","nonce":"b80468ed55027176a7cc5d51","variant":16,"anchor_prefix":"d807637b59f4388d","key_tag":"5f87c8a23c40e553","fragment_count":7,"flip_mask":[false,false,true,false,false,true,false],"decoys":6,"family_stage":"forensics-nibble-mask","family_param":{"stride":7},"complexity":1,"cycle_count":0,"cycle_params":[]}

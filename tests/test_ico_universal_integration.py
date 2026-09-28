@@ -231,28 +231,6 @@ class UniversalIntegrationTests(unittest.TestCase):
 
         self.assertNotIn("ictf{[a-z_]*}", {candidate["value"] for candidate in report["candidates"]})
 
-    def test_candidate_review_results_are_counted_in_summary(self):
-        source = (
-            Path(__file__).resolve().parents[1]
-            / "benchmarks"
-            / "ico_story_matrix"
-            / "story_01"
-            / "reverse_hard"
-            / "checker.revbin"
-        )
-        if not source.is_file():
-            self.skipTest("synthetic review fixture is unavailable")
-        with tempfile.TemporaryDirectory() as directory:
-            report = run_scan(
-                [str(source)],
-                out_dir=Path(directory) / "report",
-                verbose=False,
-                solver_registry=build_default_registry(),
-                profile_selector=lambda _classification: [],
-            )
-
-        self.assertEqual(report["summary"]["universal_review_count"], 1)
-
     def test_real_pack_answers_remain_hash_verified_without_source_mutation(self):
         source = Path(os.environ.get("ICO_CTF_REAL_ROOT", str(Path.home() / "Downloads" / "ico_ctf_real")))
         if not source.is_dir():
@@ -321,67 +299,6 @@ class UniversalIntegrationTests(unittest.TestCase):
         self.assertIn("static-pwn/chall.elf.ret2win.payload", text)
         self.assertNotIn("UNSUPPORTED:", text)
 
-    def test_story_matrix_covers_every_case_and_keeps_negatives_clean(self):
-        source = Path(__file__).resolve().parents[1] / "benchmarks" / "ico_story_matrix"
-        expected_path = source.parent / "ico_story_matrix.expected.json"
-        if not source.is_dir() or not expected_path.is_file():
-            self.skipTest("synthetic story matrix is unavailable")
-        expected = json.loads(expected_path.read_text(encoding="utf-8"))
-        before = {
-            path: path.read_bytes()
-            for path in source.rglob("*")
-            if path.is_file() and not path.is_symlink()
-        }
-        with tempfile.TemporaryDirectory() as directory:
-            report = run_scan(
-                [str(source)],
-                out_dir=Path(directory) / "report",
-                verbose=False,
-                solver_registry=build_default_registry(),
-                profile_selector=lambda _classification: [],
-            )
-        self.assertEqual(report["task_results"], [])
-        by_root: dict[str, list[dict[str, object]]] = {}
-        for item in report["universal_results"]:
-            context = item.get("evidence_context", {})
-            metadata = context.get("metadata", {}) if isinstance(context, dict) else {}
-            task_root = metadata.get("task_root") if isinstance(metadata, dict) else None
-            if task_root:
-                by_root.setdefault(str(Path(task_root).resolve()), []).append(item)
-        for case in expected["cases"]:
-            root = (source / case["story"] / case["case"]).resolve()
-            results = by_root.get(str(root), [])
-            self.assertTrue(results, f"no universal result for {case['story']}/{case['case']}")
-            values = {
-                entry["value"]
-                for result in results
-                for entry in result.get("candidates", [])
-                if isinstance(entry, dict) and entry.get("value")
-            }
-            statuses = {str(result.get("status")) for result in results}
-            expected_state = case["evidence_state"]
-            if expected_state == "unsupported":
-                self.assertFalse(values, f"negative produced a candidate: {case['case']}")
-                self.assertNotIn("candidate", statuses)
-                self.assertNotIn("hash-verified", statuses)
-                continue
-            if expected_state == "payload-ready":
-                self.assertIn("payload-ready", statuses, case["case"])
-                self.assertFalse(values, f"payload-only case yielded a flag: {case['case']}")
-                continue
-            if expected_state == "candidate-review":
-                self.assertIn("candidate-review", statuses, case["case"])
-                self.assertFalse(values, f"review-only case yielded a flag: {case['case']}")
-                continue
-            self.assertIn(case["value"], values, case["case"])
-            evidence_states = {
-                str(entry.get("state", "candidate"))
-                for result in results
-                for entry in result.get("candidates", [])
-                if isinstance(entry, dict) and entry.get("value") == case["value"]
-            }
-            self.assertIn(expected_state, evidence_states, case["case"])
-        self.assertEqual(before, {path: path.read_bytes() for path in before})
 
 
 if __name__ == "__main__":

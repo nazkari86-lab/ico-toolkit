@@ -33,7 +33,6 @@ from ico_scan_profiles import profiles_for
 from ico_solver_engine import SolverContext, SolverLimits
 from ico_tool_adapters import AdapterEvidence, available_tool_specs, run_adapter_profiles, tool_inventory
 from ico_universal_registry import build_default_registry
-from ico_final_benchmark_solver import solve_final_task
 from ico_evidence_store import EvidenceStore, persist_solve_report
 from ico_prompt_solvers import solve_prompt_task
 
@@ -1482,23 +1481,6 @@ def solve_inputs(
         if not slots:
             errors.append("no readable task files or artifacts found")
             return SolveReport((), (), tuple(errors))
-        benchmark_results: list[dict[str, Any]] = []
-        benchmark_slots = True
-        for slot in slots:
-            task_text = _read_text(slot.task_path, limits.max_bytes) if slot.task_path else ""
-            if "ICO FINAL BENCHMARK" not in task_text or slot.root is None:
-                benchmark_slots = False
-                continue
-            mechanism_match = re.search(r"(?im)^\s*Mechanism\s*:\s*(\S+)\s*$", task_text)
-            mechanism = mechanism_match.group(1) if mechanism_match else ""
-            solved = solve_final_task(slot.root, slot.task_id, slot.family, mechanism, task_text)
-            if solved is not None:
-                benchmark_results.append(solved)
-        # The generated benchmark has a dedicated, deterministic task solver.
-        # Avoid generic fan-out on its synthetic evidence: generic adapters can
-        # surface encoded decoys and would make a local benchmark score depend
-        # on which optional binaries happen to be installed.
-        benchmark_fast_path = bool(slots) and benchmark_slots
         runner = CommandRunner(workspace / "adapter-commands", policy=runner_policy)
         prompt_results: list[Any] = []
         # Keep the bounded, statement-specific derivations alongside the
@@ -1550,30 +1532,26 @@ def solve_inputs(
             except Exception as exc:
                 errors.append(f"prompt solver {slot.task_id}: {type(exc).__name__}: {exc}")
         scan_report: dict[str, object] = {}
-        if benchmark_fast_path:
-            scan_report = {"summary": {"benchmark_fast_path": True}}
-            scan_budget = None
-        else:
-            try:
-                remaining_before_scan = None if deadline_at is None else max(0.0, deadline_at - time.monotonic())
-                scan_budget = None if remaining_before_scan is None else _scan_budget_for_deadline(remaining_before_scan, mode)
-                scan_report = run_scan(
-                    [str(path) for path in prepared_inputs if path.exists()],
-                    out_dir=workspace / "scan",
-                    max_depth=limits.max_depth,
-                    max_files=limits.max_files,
-                    max_bytes=limits.max_bytes,
-                    tool_timeout=limits.timeout_seconds,
-                    archive_timeout=max(60.0, limits.timeout_seconds * 4),
-                    verbose=False,
-                    progress=False,
-                    solver_registry=build_default_registry(),
-                    mode=mode,
-                    profile_workers=max(1, min(int(workers), 32)),
-                    deadline_seconds=scan_budget,
-                )
-            except Exception as exc:  # preserve adapter results if one scanner stage fails
-                errors.append(f"ico-scan: {type(exc).__name__}: {exc}")
+        try:
+            remaining_before_scan = None if deadline_at is None else max(0.0, deadline_at - time.monotonic())
+            scan_budget = None if remaining_before_scan is None else _scan_budget_for_deadline(remaining_before_scan, mode)
+            scan_report = run_scan(
+                [str(path) for path in prepared_inputs if path.exists()],
+                out_dir=workspace / "scan",
+                max_depth=limits.max_depth,
+                max_files=limits.max_files,
+                max_bytes=limits.max_bytes,
+                tool_timeout=limits.timeout_seconds,
+                archive_timeout=max(60.0, limits.timeout_seconds * 4),
+                verbose=False,
+                progress=False,
+                solver_registry=build_default_registry(),
+                mode=mode,
+                profile_workers=max(1, min(int(workers), 32)),
+                deadline_seconds=scan_budget,
+            )
+        except Exception as exc:  # preserve adapter results if one scanner stage fails
+            errors.append(f"ico-scan: {type(exc).__name__}: {exc}")
         classifications: dict[Path, Classification] = {}
         all_paths = sorted({path for slot in slots for path in slot.paths if path.is_file()}, key=str)
         scan_classifications: dict[Path, tuple[Classification, int, int]] = {}
@@ -1679,40 +1657,34 @@ def solve_inputs(
                         verified_paths.add(Path(raw_artifact).expanduser().resolve())
                     except OSError:
                         pass
-        if benchmark_fast_path:
-            adapter_evidence = []
-            derived_solver_results = []
-            recursive_stats: dict[str, object] = {}
-        else:
-            adapter_evidence = run_adapter_profiles(
-                all_paths,
-                classifications=classifications,
-                output_dir=workspace / "adapter-artifacts",
-                runner=runner,
-                mode=mode,
-                workers=workers,
-                deadline_seconds=adapter_deadline,
-                cache_dir=selected_cache,
-                context_hashes=context_hashes,
-                skip_paths=verified_paths,
-            )
-            derived_deadline = None if deadline_at is None else max(0.0, deadline_at - time.monotonic())
-            adapter_evidence, derived_solver_results, recursive_stats = _run_adapter_derived_pipeline(
-                adapter_evidence,
-                seed_derived_inputs=prompt_derived_inputs,
-                slots=slots,
-                report_dir=workspace / "derived-solvers",
-                adapter_output_dir=workspace / "adapter-artifacts",
-                limits=limits,
-                runner=runner,
-                mode=mode,
-                workers=workers,
-                deadline_seconds=derived_deadline,
-                cache_dir=selected_cache,
-                context_hashes=context_hashes,
-            )
+        adapter_evidence = run_adapter_profiles(
+            all_paths,
+            classifications=classifications,
+            output_dir=workspace / "adapter-artifacts",
+            runner=runner,
+            mode=mode,
+            workers=workers,
+            deadline_seconds=adapter_deadline,
+            cache_dir=selected_cache,
+            context_hashes=context_hashes,
+            skip_paths=verified_paths,
+        )
+        derived_deadline = None if deadline_at is None else max(0.0, deadline_at - time.monotonic())
+        adapter_evidence, derived_solver_results, recursive_stats = _run_adapter_derived_pipeline(
+            adapter_evidence,
+            seed_derived_inputs=prompt_derived_inputs,
+            slots=slots,
+            report_dir=workspace / "derived-solvers",
+            adapter_output_dir=workspace / "adapter-artifacts",
+            limits=limits,
+            runner=runner,
+            mode=mode,
+            workers=workers,
+            deadline_seconds=derived_deadline,
+            cache_dir=selected_cache,
+            context_hashes=context_hashes,
+        )
         result_objects: list[Any] = []
-        result_objects.extend(benchmark_results)
         result_objects.extend(prompt_results)
         scan_candidates = scan_report.get("candidates", []) if isinstance(scan_report, dict) else []
         if isinstance(scan_candidates, list):
@@ -1731,8 +1703,6 @@ def solve_inputs(
         metadata = {
             "mode": mode,
             "wall_clock_seconds": round(time.monotonic() - started, 6),
-            "benchmark_fast_path": benchmark_fast_path,
-            "benchmark_result_count": len(benchmark_results),
             "prompt_solver_result_count": len(prompt_results),
             "prompt_solver_audits": prompt_audits,
             "tool_inventory": tool_inventory(),

@@ -1,1 +1,0 @@
-Synthetic negative reverse case with no derivable answer.

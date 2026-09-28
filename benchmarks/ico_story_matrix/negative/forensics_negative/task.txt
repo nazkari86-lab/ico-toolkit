@@ -1,1 +1,0 @@
-Synthetic negative forensics case with no derivable answer.

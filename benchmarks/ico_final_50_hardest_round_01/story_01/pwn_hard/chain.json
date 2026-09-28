@@ -1,1 +1,0 @@
-{"version":1,"family":"pwn","mechanism":"hard_fmt_hhn","nonce":"32ca1f7b4f31fe3941d47e90","variant":2,"anchor_prefix":"9d121742e68d1fe5","key_tag":"d1a540db3fc11fe6","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"pwn-endian-delta","family_param":{"block":4},"complexity":1,"cycle_count":0,"cycle_params":[]}

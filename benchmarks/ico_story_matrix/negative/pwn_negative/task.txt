@@ -1,1 +1,0 @@
-Synthetic negative pwn case with no derivable answer.

@@ -1,0 +1,150 @@
+{
+  "schema_version": 1,
+  "tasks": [
+    {
+      "task_id": "ictf23/crypto/elliptic",
+      "elapsed_seconds": 4.832,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/flagtor",
+      "elapsed_seconds": 4.815,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/imaginary-casino",
+      "elapsed_seconds": 9.933,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/signer",
+      "elapsed_seconds": 4.788,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/sus",
+      "elapsed_seconds": 4.781,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/tan",
+      "elapsed_seconds": 4.498,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/crypto/wasteful",
+      "elapsed_seconds": 4.813,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/forensics/blurry",
+      "elapsed_seconds": 7.616,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/forensics/crypto",
+      "elapsed_seconds": 19.237,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/forensics/steganographic",
+      "elapsed_seconds": 25.01,
+      "returncode": -9,
+      "timed_out": true
+    },
+    {
+      "task_id": "ictf23/forensics/web",
+      "elapsed_seconds": 21.587,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/form",
+      "elapsed_seconds": 5.239,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/lcode",
+      "elapsed_seconds": 4.344,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/mailman",
+      "elapsed_seconds": 12.432,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/minimal",
+      "elapsed_seconds": 4.333,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/minimaler",
+      "elapsed_seconds": 4.775,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/ret2lose",
+      "elapsed_seconds": 4.914,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/ret2win",
+      "elapsed_seconds": 4.722,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/vault",
+      "elapsed_seconds": 12.543,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/pwn/window-of-opportunity",
+      "elapsed_seconds": 17.685,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/reverse/chaos",
+      "elapsed_seconds": 4.794,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/reverse/scrambled",
+      "elapsed_seconds": 15.176,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/reverse/snailchecker",
+      "elapsed_seconds": 4.396,
+      "returncode": 2,
+      "timed_out": false
+    },
+    {
+      "task_id": "ictf23/reverse/vmcastle",
+      "elapsed_seconds": 5.239,
+      "returncode": 2,
+      "timed_out": false
+    }
+  ],
+  "total_wall_seconds": 72.401
+}

@@ -1,3 +1,0 @@
-key_prefix=IC
-key=ICO
-cipher=qec{nkbin_f25_05_ktm_4n5264867d5496qke241}

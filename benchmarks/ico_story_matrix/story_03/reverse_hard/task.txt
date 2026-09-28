@@ -1,1 +1,0 @@
-Synthetic reverse hard ret2win review; discover the stack offset and win target statically; these parameters are not supplied.

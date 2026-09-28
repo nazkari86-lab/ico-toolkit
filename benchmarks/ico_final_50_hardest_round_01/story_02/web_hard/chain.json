@@ -1,1 +1,0 @@
-{"version":1,"family":"web","mechanism":"hard_jwt_jwe_split","nonce":"106c8f6409f56ab2ae64dbd8","variant":11,"anchor_prefix":"c1b6e02b93802f71","key_tag":"45f47ac10d3cc60e","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"web-block-xor","family_param":{"block":3},"complexity":1,"cycle_count":0,"cycle_params":[]}

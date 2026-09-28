@@ -1,1 +1,0 @@
-{"version":1,"family":"crypto","mechanism":"hard_merkle_proof","nonce":"29fd537d5564e746f45be673","variant":3,"anchor_prefix":"da8c32c4d1e9f7c1","key_tag":"71d94ff7bbb08bba","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":9,"add":97},"complexity":1,"cycle_count":0,"cycle_params":[]}

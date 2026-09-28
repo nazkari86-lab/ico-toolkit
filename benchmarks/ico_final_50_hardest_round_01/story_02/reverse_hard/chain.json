@@ -1,1 +1,0 @@
-{"version":1,"family":"reverse","mechanism":"hard_opaque_cfg","nonce":"8e4f5b2a0bca9249c78cfcac","variant":12,"anchor_prefix":"453b5e3f5ec6abb0","key_tag":"1b757f3f908a0545","fragment_count":7,"flip_mask":[true,false,false,true,false,false,true],"decoys":6,"family_stage":"reverse-vm","family_param":{"xor":71,"add":41,"rotate":6},"complexity":1,"cycle_count":0,"cycle_params":[]}

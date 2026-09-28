@@ -1,1 +1,0 @@
-{"version":1,"family":"crypto","mechanism":"hard_lfsr_state","nonce":"0da15dc89455f6ecddd54b7c","variant":14,"anchor_prefix":"230184a97905f27b","key_tag":"0a7673a40aeba975","fragment_count":7,"flip_mask":[false,true,false,false,true,false,false],"decoys":6,"family_stage":"crypto-affine","family_param":{"multiplier":11,"add":95},"complexity":1,"cycle_count":0,"cycle_params":[]}

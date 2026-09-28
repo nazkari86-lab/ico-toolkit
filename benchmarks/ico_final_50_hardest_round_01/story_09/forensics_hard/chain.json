@@ -1,1 +1,0 @@
-{"version":1,"family":"forensics","mechanism":"hard_pcap_tcp","nonce":"8eb1be488eff1e8fd6a744ea","variant":16,"anchor_prefix":"a3f69d7ddf6bd3c7","key_tag":"71d7c7ef2dd7e783","fragment_count":7,"flip_mask":[false,false,true,false,false,true,false],"decoys":6,"family_stage":"forensics-nibble-mask","family_param":{"stride":7},"complexity":1,"cycle_count":0,"cycle_params":[]}

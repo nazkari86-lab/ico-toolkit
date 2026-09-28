@@ -1,0 +1,267 @@
+{
+  "schema_version": 2,
+  "manifest": "ImaginaryCTF-2023-official-distributions",
+  "manifest_sha256": "791324c5ec21e3f377b70bec4f491bda2e8d6b75bf6ce4c2b9254f0f7e8880cf",
+  "solver_revision": "d239396c83de281206586560cc4f9ae60c75e7dc+worktree-no-final-benchmark",
+  "corpus_revision": "4a1b779026c3b69a71bef1c8c29eb2e9f8dbee7e",
+  "duration_seconds": 72.401,
+  "total_tasks": 24,
+  "verified_count": 0,
+  "verified_score": 0.0,
+  "wilson_95": {
+    "lower": 1.3877787807814457e-17,
+    "upper": 0.13797620467498017
+  },
+  "by_family": {
+    "crypto": {
+      "verified": 0,
+      "total": 7,
+      "score": 0.0,
+      "wilson_95": {
+        "lower": 5.551115123125783e-17,
+        "upper": 0.35433043506668743
+      }
+    },
+    "forensics": {
+      "verified": 0,
+      "total": 4,
+      "score": 0.0,
+      "wilson_95": {
+        "lower": 0.0,
+        "upper": 0.4898908364545973
+      }
+    },
+    "pwn": {
+      "verified": 0,
+      "total": 9,
+      "score": 0.0,
+      "wilson_95": {
+        "lower": 0.0,
+        "upper": 0.2991450484195441
+      }
+    },
+    "reverse": {
+      "verified": 0,
+      "total": 4,
+      "score": 0.0,
+      "wilson_95": {
+        "lower": 0.0,
+        "upper": 0.4898908364545973
+      }
+    }
+  },
+  "by_difficulty": {
+    "unclassified": {
+      "verified": 0,
+      "total": 24,
+      "score": 0.0,
+      "wilson_95": {
+        "lower": 1.3877787807814457e-17,
+        "upper": 0.13797620467498017
+      }
+    }
+  },
+  "task_outcomes": [
+    {
+      "task_id": "ictf23/crypto/elliptic",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/flagtor",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/imaginary-casino",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/signer",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/sus",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/tan",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/crypto/wasteful",
+      "family": "crypto",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/forensics/blurry",
+      "family": "forensics",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/forensics/crypto",
+      "family": "forensics",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/forensics/steganographic",
+      "family": "forensics",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/forensics/web",
+      "family": "forensics",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/form",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/lcode",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/mailman",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/minimal",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/minimaler",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/ret2lose",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/ret2win",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/vault",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/pwn/window-of-opportunity",
+      "family": "pwn",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/reverse/chaos",
+      "family": "reverse",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/reverse/scrambled",
+      "family": "reverse",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/reverse/snailchecker",
+      "family": "reverse",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    },
+    {
+      "task_id": "ictf23/reverse/vmcastle",
+      "family": "reverse",
+      "difficulty": "unclassified",
+      "verified": false,
+      "candidate_count": 0
+    }
+  ],
+  "missing_tasks": [
+    "ictf23/crypto/elliptic",
+    "ictf23/crypto/flagtor",
+    "ictf23/crypto/imaginary-casino",
+    "ictf23/crypto/signer",
+    "ictf23/crypto/sus",
+    "ictf23/crypto/tan",
+    "ictf23/crypto/wasteful",
+    "ictf23/forensics/blurry",
+    "ictf23/forensics/crypto",
+    "ictf23/forensics/steganographic",
+    "ictf23/forensics/web",
+    "ictf23/pwn/form",
+    "ictf23/pwn/lcode",
+    "ictf23/pwn/mailman",
+    "ictf23/pwn/minimal",
+    "ictf23/pwn/minimaler",
+    "ictf23/pwn/ret2lose",
+    "ictf23/pwn/ret2win",
+    "ictf23/pwn/vault",
+    "ictf23/pwn/window-of-opportunity",
+    "ictf23/reverse/chaos",
+    "ictf23/reverse/scrambled",
+    "ictf23/reverse/snailchecker",
+    "ictf23/reverse/vmcastle"
+  ],
+  "false_positive_count": 0,
+  "false_positive_task_ids": [],
+  "false_positive_analyzers": {},
+  "duplicate_count": 0,
+  "holdout_pass": false,
+  "report_candidate_count": 0,
+  "report_slot_count": 24
+}

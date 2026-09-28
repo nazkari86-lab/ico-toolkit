@@ -1,3 +1,0 @@
-decoy_tail=000000000000000000000000000000000000000000000000
-digest_tail=fcb9bfee2fa1b0aefaeab3dcb8a3207dbde97ff5c77271ad
-rule=sha256(base85-stage)
