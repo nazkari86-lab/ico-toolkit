@@ -17,12 +17,13 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Mapping
-from urllib.parse import urlsplit
+from urllib.parse import urljoin, urlsplit
 
 from ico_scan_core import CommandRunner, FlagMatcher
 
 
 _SERVICE_URL = re.compile(r"https?://[^\s<>'\"`\\]+", re.IGNORECASE)
+_SOURCE_ROUTE = re.compile(r"(?:\.route|\.(?:get|post|put|patch|delete)|router\.(?:get|post|put|patch|delete))\s*\(\s*[\"'](/[^\"'<>\s{}]*)", re.IGNORECASE)
 _RUNNABLE_SUFFIXES = {"", ".bin", ".elf", ".exe", ".out"}
 _NON_EXECUTABLE_SUFFIXES = {".so", ".dylib", ".a", ".o", ".py", ".pyc", ".js", ".wasm"}
 
@@ -113,6 +114,42 @@ def _runnable_paths(paths: tuple[Path, ...]) -> tuple[Path, ...]:
     return tuple(selected[:4])
 
 
+def _source_request_templates(paths: tuple[Path, ...], *, max_bytes: int = 256 * 1024) -> list[dict[str, object]]:
+    """Read cURL/HAR/raw-HTTP requests already supplied with a task."""
+
+    from ico_solver_engine import SolverLimits
+    from ico_universal_web import parse_http_transcript
+
+    templates: list[dict[str, object]] = []
+    for path in paths:
+        try:
+            if not path.is_file() or path.stat().st_size > max_bytes:
+                continue
+            records = parse_http_transcript(path, SolverLimits(max_bytes=max_bytes, max_files=16, timeout_seconds=2))
+        except (OSError, ValueError, UnicodeError):
+            continue
+        for record in records:
+            url = str(record.get("url", ""))
+            if urlsplit(url).scheme not in {"http", "https"}:
+                continue
+            templates.append(
+                {
+                    "method": str(record.get("method", "GET")).upper(),
+                    "url": url,
+                    "headers": record.get("request_headers", {}),
+                    "body": record.get("request_body", ""),
+                    "source": str(path),
+                }
+            )
+    return templates[:32]
+
+
+def _source_route_paths(text: str) -> tuple[str, ...]:
+    """Extract literal web routes from supplied application source."""
+
+    return tuple(dict.fromkeys(match.group(1) for match in _SOURCE_ROUTE.finditer(text)))[:32]
+
+
 def run_active_task(
     *,
     task_text: str,
@@ -150,13 +187,15 @@ def run_active_task(
             TargetPolicy(
                 allowed_hosts=hosts,
                 blocked_hosts=(),
-                max_requests=min(request_budget, len(endpoints)),
+                max_requests=request_budget,
                 timeout_seconds=timeout_seconds,
             )
         )
+        replayed: set[tuple[str, str, str]] = set()
         for url in endpoints:
             response = client.request("GET", url)
             record = response.to_dict()
+            record["origin"] = "discovered-url"
             result.requests.append(record)
             result.candidates.extend(
                 _flag_hits(
@@ -165,6 +204,60 @@ def run_active_task(
                     source=url,
                     analyzer="active-http-get",
                     http_status=response.status,
+                )
+            )
+            replayed.add(("GET", url, ""))
+        for path in _source_route_paths("\n".join(source_texts)):
+            if client.request_count >= request_budget:
+                break
+            for endpoint in endpoints:
+                url = urljoin(endpoint, path)
+                key = ("GET", url, "")
+                if key in replayed:
+                    continue
+                response = client.request("GET", url)
+                record = response.to_dict()
+                record["origin"] = "source-route-discovery"
+                record["route"] = path
+                result.requests.append(record)
+                replayed.add(key)
+                result.candidates.extend(
+                    _flag_hits(
+                        matcher,
+                        response.body,
+                        source=url,
+                        analyzer="active-source-route",
+                        http_status=response.status,
+                        route=path,
+                    )
+                )
+                if client.request_count >= request_budget:
+                    break
+        for template in _source_request_templates(task_paths):
+            if client.request_count >= request_budget:
+                break
+            method = str(template["method"])
+            url = str(template["url"])
+            body = str(template["body"])
+            key = (method, url, body)
+            if key in replayed or (urlsplit(url).hostname or "").lower() not in hosts:
+                continue
+            raw_headers = template["headers"]
+            headers = {str(key): str(value) for key, value in raw_headers.items()} if isinstance(raw_headers, Mapping) else {}
+            response = client.request(method, url, headers=headers, body=body)
+            record = response.to_dict()
+            record["origin"] = "source-request-template"
+            record["template_source"] = str(template["source"])
+            result.requests.append(record)
+            replayed.add(key)
+            result.candidates.extend(
+                _flag_hits(
+                    matcher,
+                    response.body,
+                    source=url,
+                    analyzer="active-source-request",
+                    http_status=response.status,
+                    template_source=str(template["source"]),
                 )
             )
     for index, executable in enumerate(_runnable_paths(task_paths)):
