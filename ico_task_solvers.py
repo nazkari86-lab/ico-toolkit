@@ -42,6 +42,7 @@ class TaskResult:
     candidates: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[str] = field(default_factory=list)
     error: str | None = None
+    derived_inputs: list[str] = field(default_factory=list)
 
     def to_dict(self) -> dict[str, Any]:
         value = asdict(self)
@@ -240,6 +241,7 @@ def _write_artifact(result: TaskResult, output_dir: Path, name: str, data: bytes
     path.relative_to(root)
     path.write_bytes(data)
     result.artifacts.append(str(path))
+    result.derived_inputs.append(str(path))
     return path
 
 

@@ -23,9 +23,14 @@ class IcoSolveCliTests(unittest.TestCase):
                 capture_output=True,
                 check=False,
             )
+            handoff_dir = debug / "gpt-handoffs" / "story_01_crypto"
+            self.assertTrue((handoff_dir / "gpt-4.1-handoff.md").is_file())
+            self.assertTrue((handoff_dir / "gpt-4.1-evidence.zip").is_file())
         self.assertEqual(completed.returncode, 0, completed.stderr)
         self.assertEqual(completed.stdout, "ico{cli_fixture}\n")
-        self.assertEqual(completed.stderr, "")
+        self.assertIn("GPT-4.1 HANDOFF: story_01/crypto", completed.stderr)
+        self.assertIn("gpt-4.1-handoff.md", completed.stderr)
+        self.assertIn("gpt-4.1-evidence.zip", completed.stderr)
 
     def test_tools_inventory_is_available_without_input(self):
         toolkit = Path(__file__).resolve().parents[1]

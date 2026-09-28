@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import base64
+import gzip
 import json
 import os
 import tempfile
@@ -42,6 +44,31 @@ class UniversalIntegrationTests(unittest.TestCase):
             )
         self.assertEqual(report["candidates"], [])
         self.assertTrue(report["summary"]["universal_solver_count"] >= 1)
+
+    def test_base85_decoded_gzip_is_fed_back_to_the_solver(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = root / "crypto_base85"
+            task.mkdir()
+            (task / "task.txt").write_text(
+                "Title: layered message\nCategory: Crypto\nRecover the original file hidden in this text.\n",
+                encoding="utf-8",
+            )
+            expected = "ico{base85_gzip_pipeline_fixture}"
+            (task / "payload.txt").write_bytes(base64.b85encode(gzip.compress(expected.encode(), mtime=0)))
+            report = run_scan(
+                [str(task)],
+                out_dir=root / "report",
+                verbose=False,
+                max_depth=3,
+                max_files=24,
+                solver_registry=build_default_registry(),
+                profile_selector=lambda _classification: [],
+                mode="fast",
+            )
+
+        self.assertIn(expected, {candidate["value"] for candidate in report["candidates"]})
+        self.assertTrue(any(event.get("type") == "derived-input-queued" for event in report["events"]))
 
     def test_generic_task_coverage_groups_candidates_by_task_root(self):
         with tempfile.TemporaryDirectory() as directory:

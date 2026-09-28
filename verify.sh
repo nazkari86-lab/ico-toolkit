@@ -6,7 +6,8 @@ ROOT="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 
 python3 -m unittest discover -s "$ROOT/tests" -q
 pytest -q "$ROOT"/tests/test_final_benchmark_*.py
-python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py "$ROOT"/scripts/holdout_benchmark.py
+python3 -m py_compile "$ROOT"/ico_*.py "$ROOT"/tests/*.py "$ROOT"/scripts/run_corpus_matrix.py "$ROOT"/scripts/benchmark_ico_solve.py "$ROOT"/scripts/run_final_benchmark_cycle.py "$ROOT"/scripts/holdout_benchmark.py "$ROOT"/scripts/run_unblob_bounded.py "$ROOT"/scripts/rsa_coppersmith_solver.py
+sh -n "$ROOT/scripts/install_optional_active_tools.sh"
 
 for tool in binwalk pngcheck qpdf 7zz zsteg stegseek steghide exiftool foremost \
   ffuf feroxbuster gobuster hashcat hydra john nmap r2 sqlmap yara tshark vol gdb jq ffmpeg \
@@ -16,6 +17,8 @@ done
 
 ./ico-scan --help >/dev/null
 ./ico-solve --help >/dev/null
+./ico-quals-active --help >/dev/null
+ico-rsa-coppersmith --help >/dev/null
 qiling --probe >/dev/null
 scalpel --help >/dev/null
 strace --help >/dev/null
@@ -46,8 +49,9 @@ assert all(item["state"] == "candidate" for item in report["candidates"])
 print("ico-scan fixture smoke: OK")
 PY
 
-ico_solve_flag=$(./ico-solve "$fixture_dir/fixtures/direct.bin" --mode fast)
+ico_solve_flag=$(./ico-solve "$fixture_dir/fixtures/direct.bin" --mode fast --handoff-dir "$fixture_dir/handoffs" 2>"$fixture_dir/ico-solve.stderr")
 [ "$ico_solve_flag" = "ico{fixture_direct}" ] || { echo "ico-solve fixture smoke failed: $ico_solve_flag" >&2; exit 1; }
+[ "$(find "$fixture_dir/handoffs" -name gpt-4.1-handoff.md -type f | wc -l | tr -d ' ')" -ge 1 ] || { echo "ico-solve GPT handoff smoke failed" >&2; exit 1; }
 echo "ico-solve fixture smoke: OK"
 
 benchmark_json=$(python3 "$ROOT/scripts/benchmark_ico_solve.py" "$fixture_dir/fixtures/direct.bin" --mode fast --repeat 2)

@@ -1,0 +1,4 @@
+# Optional active-web utility, isolated from the core solver runtime.
+# The toolkit never launches Arjun automatically; use only with an explicit
+# authorized local challenge replica or task instance.
+arjun==2.2.7

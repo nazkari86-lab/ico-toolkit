@@ -3,9 +3,13 @@ from __future__ import annotations
 import tempfile
 import unittest
 from pathlib import Path
+from types import SimpleNamespace
+from unittest.mock import patch
 
 from ico_scan import _derived_artifact_paths, run_scan
 from ico_scan_core import CommandRunner
+from ico_quals_solvers import QualsTaskResult
+from ico_task_solvers import TaskResult
 from ico_solver_engine import (
     Detection,
     SolverContext,
@@ -74,6 +78,18 @@ class DerivedInputSolver(FixtureSolver):
             "candidate",
             candidates=[{"value": "ico{derived_input_scanned}", "source": str(context.input_path)}],
         )
+
+
+class DerivedCandidateSolver(FixtureSolver):
+    def solve(self, context: SolverContext) -> SolverResult:
+        if context.input_path.name == "task-derived.txt":
+            return SolverResult(
+                self.name,
+                self.category,
+                "candidate",
+                candidates=[{"value": "ico{task_aware_derived}", "source": str(context.input_path)}],
+            )
+        return SolverResult(self.name, self.category, "unsupported")
 
 
 class ContextCaptureSolver(FixtureSolver):
@@ -199,6 +215,76 @@ class SolverEngineTests(unittest.TestCase):
         self.assertTrue(any(event.get("type") == "derived-input-queued" for event in report["events"]))
         self.assertEqual(solver.contexts[1].task_text, "story clue")
         self.assertEqual(solver.contexts[1].metadata["task_root"], str(task.resolve()))
+
+    def test_run_scan_queues_task_solver_derived_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            task = root / "task"
+            task.mkdir()
+            statement = task / "task.txt"
+            statement.write_text("Family: Forensics\n", encoding="utf-8")
+
+            def fake_task_solver(task_dir, output_dir, expected_hash=None):
+                derived = output_dir / "artifacts" / "task-solvers" / "task-derived.txt"
+                derived.parent.mkdir(parents=True, exist_ok=True)
+                derived.write_text("decoded evidence", encoding="utf-8")
+                return TaskResult(
+                    "1", task_dir, "fixture-task", "candidate",
+                    artifacts=[str(derived)], derived_inputs=[str(derived)],
+                )
+
+            with (
+                patch("ico_scan.discover_task_dirs", return_value=[task]),
+                patch("ico_scan.task_manifest_path", return_value=statement),
+                patch("ico_scan.select_solver", return_value=SimpleNamespace(name="fixture-task")),
+                patch("ico_scan.solve_task", side_effect=fake_task_solver),
+            ):
+                report = run_scan(
+                    [str(task)],
+                    out_dir=root / "report",
+                    profile_selector=lambda _classification: [],
+                    solver_registry=SolverRegistry([DerivedCandidateSolver("derived-check", "misc", 90)]),
+                    verbose=False,
+                )
+
+        self.assertIn("ico{task_aware_derived}", {item["value"] for item in report["candidates"]})
+        self.assertTrue(
+            any(event.get("type") == "derived-input-queued" and event.get("solver") == "fixture-task" for event in report["events"])
+        )
+
+    def test_run_scan_queues_quals_solver_derived_inputs(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            quals = root / "quals"
+            quals.mkdir()
+
+            def fake_quals_solver(task_root, output_dir):
+                derived = output_dir / "artifacts" / "ico-quals" / "fixture" / "task-derived.txt"
+                derived.parent.mkdir(parents=True, exist_ok=True)
+                derived.write_text("decoded evidence", encoding="utf-8")
+                return [QualsTaskResult(
+                    "fixture-quals", task_root, "fixture-quals", "candidate",
+                    artifacts=[str(derived)], derived_inputs=[str(derived)],
+                )]
+
+            with (
+                patch("ico_scan.discover_task_dirs", return_value=[]),
+                patch("ico_scan.discover_ico_quals_roots", return_value=[quals]),
+                patch("ico_scan.solve_ico_quals_root", side_effect=fake_quals_solver),
+                patch("ico_scan.write_qual_answer_index", return_value={}),
+            ):
+                report = run_scan(
+                    [],
+                    out_dir=root / "report",
+                    profile_selector=lambda _classification: [],
+                    solver_registry=SolverRegistry([DerivedCandidateSolver("derived-check", "misc", 90)]),
+                    verbose=False,
+                )
+
+        self.assertIn("ico{task_aware_derived}", {item["value"] for item in report["candidates"]})
+        self.assertTrue(
+            any(event.get("type") == "derived-input-queued" and event.get("solver") == "fixture-quals" for event in report["events"])
+        )
 
     def test_task_context_contains_only_related_evidence_files(self):
         with tempfile.TemporaryDirectory() as directory:

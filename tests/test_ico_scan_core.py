@@ -53,6 +53,19 @@ class CoreTests(unittest.TestCase):
         self.assertLessEqual(len(result.stdout.encode("utf-8")), 32 + 64)
         self.assertIn("output truncated", result.stdout)
 
+    def test_command_runner_can_feed_binary_stdin_without_a_shell(self):
+        with tempfile.TemporaryDirectory() as directory:
+            runner = CommandRunner(Path(directory))
+            result = runner.run(
+                [sys.executable, "-c", "import sys; sys.stdout.buffer.write(sys.stdin.buffer.read())"],
+                cwd=Path(directory),
+                timeout=5,
+                log_name="binary-stdin",
+                input_bytes=b"\x00ICO\x00",
+            )
+        self.assertEqual(result.returncode, 0)
+        self.assertEqual(result.stdout.encode("utf-8"), b"\x00ICO\x00")
+
     def test_command_runner_log_paths_are_unique_when_called_concurrently(self):
         with tempfile.TemporaryDirectory() as directory:
             runner = CommandRunner(Path(directory) / "commands")

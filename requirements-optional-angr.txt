@@ -1,0 +1,4 @@
+# Separate Python 3.12 environment for symbolic analysis. angr pins its own
+# Claripy/Z3 stack and does not modify the main toolkit or analysis runtime.
+angr==9.2.223
+z3-solver==4.13.0.0

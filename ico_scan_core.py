@@ -173,6 +173,7 @@ class CommandRunner:
         cwd: Path,
         timeout: float = 30.0,
         log_name: str = "command",
+        input_bytes: bytes | None = None,
     ) -> CommandResult:
         argv = [str(value) for value in args]
         started = time.monotonic()
@@ -193,7 +194,7 @@ class CommandRunner:
                 process = subprocess.Popen(
                     argv,
                     cwd=str(cwd),
-                    stdin=subprocess.DEVNULL,
+                    stdin=subprocess.PIPE if input_bytes is not None else subprocess.DEVNULL,
                     stdout=stdout_file,
                     stderr=stderr_file,
                     shell=False,
@@ -201,7 +202,7 @@ class CommandRunner:
                     preexec_fn=(lambda: _apply_child_limits(self.policy)) if self.policy is not None and os.name == "posix" else None,
                 )
                 try:
-                    process.communicate(timeout=max(0.1, timeout))
+                    process.communicate(input=input_bytes, timeout=max(0.1, timeout))
                 except subprocess.TimeoutExpired:
                     result.timed_out = True
                     try:

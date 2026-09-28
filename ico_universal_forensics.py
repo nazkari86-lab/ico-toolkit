@@ -678,6 +678,20 @@ def _decode_capture_frame(frame: bytes, link_type: int, original: int) -> dict[s
             if labels:
                 record["dns_labels"] = labels
                 record["dns_name"] = ".".join(labels)
+    elif protocol == 1 and len(frame) >= transport + 8:
+        # ICMP echo captures are useful even when they carry no TCP/UDP
+        # metadata.  Expose the message bytes after the standard 8-byte ICMP
+        # header so task solvers can decode application data safely.
+        icmp_type, icmp_code = frame[transport], frame[transport + 1]
+        payload = frame[transport + 8 :]
+        record.update(
+            {
+                "protocol_name": "icmp",
+                "icmp_type": icmp_type,
+                "icmp_code": icmp_code,
+                "payload": payload,
+            }
+        )
     else:
         return None
     return record

@@ -1,0 +1,4 @@
+#!/usr/bin/env python3
+from ico_quals_active import main
+
+raise SystemExit(main())

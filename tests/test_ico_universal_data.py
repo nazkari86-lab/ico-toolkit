@@ -41,6 +41,50 @@ class UniversalDataTests(unittest.TestCase):
         self.assertIn(flag, decoded)
         self.assertTrue(any(item[2]["depth"] == 1 for item in views))
 
+    def test_decode_text_tokens_discovers_base58_without_a_hint(self):
+        alphabet = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+        flag = b"ico{base58_chain_fixture}"
+        number = int.from_bytes(flag, "big")
+        encoded = bytearray()
+        while number:
+            number, digit = divmod(number, 58)
+            encoded.insert(0, alphabet[digit])
+        views = decode_text_tokens(bytes(encoded), max_bytes=1024)
+        self.assertIn(("base58", flag), {(view[0], view[1]) for view in views})
+        self.assertTrue(any(view[2]["detection"] == "flag-shaped-plaintext" for view in views if view[0] == "base58"))
+        embedded = decode_text_tokens(
+            b"payload: " + bytes(encoded) + b"\n",
+            max_bytes=1024,
+            hints="The task says Base58.",
+        )
+        self.assertIn(("base58", flag), {(view[0], view[1]) for view in embedded})
+
+    def test_unhinted_base85_is_kept_only_when_it_decodes_to_a_recognized_file(self):
+        compressed = gzip.compress(b"nested challenge data", mtime=0)
+        encoded = base64.b85encode(compressed)
+        views = decode_text_tokens(encoded, max_bytes=1024)
+        self.assertIn(("base85", compressed), {(view[0], view[1]) for view in views})
+
+        random_binary = bytes(range(32))
+        ambiguous = base64.b85encode(random_binary)
+        rejected = decode_text_tokens(ambiguous, max_bytes=1024)
+        self.assertNotIn(("base85", random_binary), {(view[0], view[1]) for view in rejected})
+
+    def test_data_solver_queues_base85_decoded_gzip_for_next_worker(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            flag = b"ico{base85_gzip_chain_fixture}"
+            compressed = gzip.compress(flag, mtime=0)
+            source = root / "payload.txt"
+            source.write_bytes(base64.b85encode(compressed))
+            result = DataSolver().solve(self._context(root, source, kind="text", task_text="Recover the original file hidden in this text."))
+            derived = [Path(path) for path in result.derived_inputs]
+            self.assertEqual([path.read_bytes() for path in derived], [compressed])
+            self.assertEqual(result.candidates, [])
+
+            follow_on = DataSolver().solve(self._context(root, derived[0], kind="archive"))
+            self.assertIn(flag.decode(), {item["value"] for item in follow_on.candidates})
+
     def test_data_solver_recovers_crib_xor(self):
         with tempfile.TemporaryDirectory() as directory:
             root = Path(directory)

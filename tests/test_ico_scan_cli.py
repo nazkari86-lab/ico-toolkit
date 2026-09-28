@@ -630,7 +630,7 @@ class CliTests(unittest.TestCase):
                 runner=CommandRunner(),
             )
             report_text = (Path(directory) / "report" / "report.txt").read_text(encoding="utf-8")
-            self.assertIn("Generic artifacts: 0", report_text)
+            self.assertIn("Generic artifacts: 18", report_text)
             self.assertIn("Task artifacts: 10", report_text)
             self.assertIn("Derived artifacts: 18", report_text)
         self.assertEqual(report["summary"]["solved_tasks"], 10)
@@ -732,6 +732,7 @@ class CliTests(unittest.TestCase):
                 for item in report["artifacts"]
                 if Path(item["path"]).name == "challenge.png"
             )
+            self.assertGreater(challenge_artifact["mtime_ns"], 0)
 
         self.assertEqual(report["summary"]["quals_task_count"], 10)
         self.assertEqual(report["summary"]["quals_candidate_task_count"], 1)

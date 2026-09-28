@@ -1,0 +1,11 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ANGR_VENV=${ICO_ANGR_VENV:-"$ROOT/../ico-angr-venv312"}
+PYTHON="$ANGR_VENV/bin/python"
+if [ ! -x "$PYTHON" ]; then
+  printf '%s\n' '{"schema_version":1,"status":"unavailable","reason":"isolated angr runtime is not installed"}'
+  exit 0
+fi
+exec "$PYTHON" "$ROOT/scripts/angr_symbolic_solver.py" "$@"

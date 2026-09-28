@@ -1,0 +1,15 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ANALYSIS_VENV=${ICO_ANALYSIS_VENV:-"$ROOT/../ico-analysis-venv312"}
+PYTHON="$ANALYSIS_VENV/bin/python"
+if [ ! -x "$PYTHON" ]; then
+  printf '%s\n' '{"schema_version":1,"status":"unavailable","reason":"isolated analysis runtime is not installed"}'
+  exit 0
+fi
+if ! "$PYTHON" -c 'import fpylll, sympy' >/dev/null 2>&1; then
+  printf '%s\n' '{"schema_version":1,"status":"unavailable","reason":"fpylll and sympy are required in the isolated analysis runtime"}'
+  exit 0
+fi
+exec "$PYTHON" "$ROOT/scripts/rsa_coppersmith_solver.py" "$@"

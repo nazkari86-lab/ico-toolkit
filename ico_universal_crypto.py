@@ -21,6 +21,35 @@ from ico_scan_core import FlagMatcher
 from ico_solver_engine import Detection, SolverContext, SolverLimits, SolverResult
 
 
+_CHAIN_TRANSFORM_HINTS = (
+    ("base16", re.compile(r"\b(?:base\s*16|hex(?:adecimal)?)\b", re.IGNORECASE)),
+    ("base32", re.compile(r"\bbase\s*32\b", re.IGNORECASE)),
+    ("base58", re.compile(r"\bbase\s*58\b", re.IGNORECASE)),
+    ("base64", re.compile(r"\bbase\s*64\b", re.IGNORECASE)),
+    ("base85", re.compile(r"\b(?:base\s*85|ascii\s*85)\b", re.IGNORECASE)),
+    ("rotation", re.compile(r"\b(?:rot(?!\s*47)\s*\d+|caesar)\b", re.IGNORECASE)),
+    ("rot47", re.compile(r"\brot\s*47\b", re.IGNORECASE)),
+    ("atbash", re.compile(r"\batbash\b", re.IGNORECASE)),
+    ("morse", re.compile(r"\bmorse\b", re.IGNORECASE)),
+    ("nato", re.compile(r"\b(?:nato|phonetic alphabet)\b", re.IGNORECASE)),
+    ("t9", re.compile(r"\b(?:t9|multi[- ]tap)\b", re.IGNORECASE)),
+    ("rail-fence", re.compile(r"\brail\s*[- ]?fence\b", re.IGNORECASE)),
+    ("vigenere", re.compile(r"\bvigen[eè]re\b", re.IGNORECASE)),
+    ("affine", re.compile(r"\baffine cipher\b", re.IGNORECASE)),
+    ("xor", re.compile(r"\b(?:xor|exclusive or)\b", re.IGNORECASE)),
+    ("url", re.compile(r"\burl[- ]?(?:encoding|decoding|encoded|decoded)\b", re.IGNORECASE)),
+    ("gzip", re.compile(r"\bgzip\b", re.IGNORECASE)),
+    ("zip", re.compile(r"\bzip(?:ped)?\b", re.IGNORECASE)),
+    ("aes", re.compile(r"\baes(?:[- ]?(?:ecb|cbc|ctr|gcm))?\b", re.IGNORECASE)),
+)
+
+
+def _explicit_transform_families(task_text: str) -> tuple[str, ...]:
+    """Return distinct, explicitly named transform families from a condition."""
+
+    return tuple(name for name, pattern in _CHAIN_TRANSFORM_HINTS if pattern.search(task_text))
+
+
 def _read_limited(path: Path, limit: int) -> bytes:
     size = path.stat().st_size
     if size > limit:
@@ -82,10 +111,193 @@ def _integer_nth_root(value: int, exponent: int) -> tuple[int, bool]:
     return low, low**exponent == value
 
 
+def recover_rsa_broadcast(
+    samples: list[tuple[int, int]],
+    exponent: int,
+    *,
+    max_samples: int = 64,
+    max_bits: int = 8192,
+) -> dict[str, object] | None:
+    """Recover an unpadded low-exponent RSA message from Håstad samples.
+
+    Every accepted sample must be a ciphertext of the same message and
+    exponent under a pairwise-coprime modulus. Recovery is returned only when
+    CRT yields an exact integer power and the message re-encrypts to every
+    supplied ciphertext.
+    """
+
+    if exponent < 2 or exponent > 7 or len(samples) < exponent or len(samples) > max_samples:
+        return None
+    selected: list[tuple[int, int]] = []
+    for modulus, ciphertext in samples:
+        if (
+            modulus <= 1
+            or modulus.bit_length() > max_bits
+            or ciphertext < 0
+            or ciphertext >= modulus
+        ):
+            return None
+        if any(math.gcd(modulus, previous_modulus) != 1 for previous_modulus, _ in selected):
+            continue
+        selected.append((modulus, ciphertext))
+        if len(selected) == exponent:
+            break
+    if len(selected) < exponent:
+        return None
+
+    product = math.prod(modulus for modulus, _ in selected)
+    combined = 0
+    try:
+        for modulus, ciphertext in selected:
+            partial = product // modulus
+            combined += ciphertext * partial * pow(partial, -1, modulus)
+    except ValueError:
+        return None
+    combined %= product
+    message, exact = _integer_nth_root(combined, exponent)
+    if not exact or any(pow(message, exponent, modulus) != ciphertext for modulus, ciphertext in selected):
+        return None
+    return {
+        "method": "rsa-broadcast-hastad",
+        "plaintext": _int_to_bytes(message),
+        "exponent": exponent,
+        "samples_used": len(selected),
+        "modulus_product_bits": product.bit_length(),
+    }
+
+
+def recover_rsa_shared_primes(
+    samples: list[tuple[int, int, int]],
+    *,
+    max_samples: int = 64,
+    max_bits: int = 8192,
+) -> list[dict[str, object]]:
+    """Decrypt RSA samples whose moduli share a non-trivial prime factor.
+
+    This is the batch-GCD failure mode covered by classic CTF crypto toolkits:
+    weak key generation can reuse one prime across otherwise distinct public
+    keys. Each recovered plaintext is accepted only after exact RSA
+    re-encryption matches its original ciphertext.
+    """
+
+    if len(samples) < 2 or len(samples) > max_samples:
+        return []
+    bounded: list[tuple[int, int, int]] = []
+    for modulus, exponent, ciphertext in samples:
+        if (
+            modulus <= 3
+            or modulus.bit_length() > max_bits
+            or exponent <= 1
+            or exponent >= modulus
+            or ciphertext < 0
+            or ciphertext >= modulus
+        ):
+            return []
+        bounded.append((modulus, exponent, ciphertext))
+
+    recovered: dict[str, dict[str, object]] = {}
+    for index, (modulus, exponent, ciphertext) in enumerate(bounded):
+        for other_index, (other_modulus, _other_exponent, _other_ciphertext) in enumerate(bounded):
+            if index == other_index:
+                continue
+            shared = math.gcd(modulus, other_modulus)
+            if shared <= 1 or shared >= modulus:
+                continue
+            other_factor, remainder = divmod(modulus, shared)
+            if remainder:
+                continue
+            phi = (shared - 1) * (other_factor - 1)
+            if phi <= 0:
+                continue
+            try:
+                private_exponent = pow(exponent, -1, phi)
+                message = pow(ciphertext, private_exponent, modulus)
+            except ValueError:
+                continue
+            if pow(message, exponent, modulus) != ciphertext:
+                continue
+            plaintext = _int_to_bytes(message)
+            key = hashlib.sha256(plaintext).hexdigest()
+            recovered.setdefault(
+                key,
+                {
+                    "method": "rsa-shared-prime-batch-gcd",
+                    "plaintext": plaintext,
+                    "key_index": index,
+                    "peer_index": other_index,
+                    "shared_factor_bits": shared.bit_length(),
+                    "modulus_bits": modulus.bit_length(),
+                    "roundtrip_verified": True,
+                },
+            )
+            break
+    return list(recovered.values())
+
+
 def _int_to_bytes(value: int) -> bytes:
     if value == 0:
         return b"\x00"
     return value.to_bytes((value.bit_length() + 7) // 8, "big")
+
+
+def _parse_indexed_rsa_samples(text: str, *, max_samples: int) -> list[tuple[int, int]]:
+    """Pair explicitly numbered modulus/ciphertext assignments in task text."""
+
+    integer = r"(0x[0-9a-fA-F]+|\d+)"
+    index = r"(?:_\s*(\d+)|\[\s*(\d+)\s*\]|(\d+))"
+    assignments: dict[str, dict[str, int]] = {}
+    patterns = (
+        ("n", re.compile(rf"(?<![A-Za-z0-9])(?:n|modulus){index}\s*[:=]\s*{integer}", re.I)),
+        ("c", re.compile(rf"(?<![A-Za-z0-9])(?:ciphertext|cipher|encrypted|ct|c){index}\s*[:=]\s*{integer}", re.I)),
+    )
+    for field, pattern in patterns:
+        for match in pattern.finditer(text):
+            sample_index = next(value for value in match.groups()[:3] if value is not None)
+            raw_value = match.groups()[3]
+            value = int(raw_value, 0) if raw_value.lower().startswith("0x") else int(raw_value, 10)
+            slot = assignments.setdefault(sample_index, {})
+            if field not in slot:
+                slot[field] = value
+            if len(assignments) >= max_samples:
+                break
+    return [
+        (assignments[key]["n"], assignments[key]["c"])
+        for key in sorted(assignments, key=lambda value: (len(value), value))
+        if {"n", "c"}.issubset(assignments[key])
+    ][:max_samples]
+
+
+def _parse_indexed_rsa_key_samples(
+    text: str, *, max_samples: int
+) -> list[tuple[int, int, int]]:
+    """Pair explicitly indexed n/e/c values without guessing field alignment."""
+
+    integer = r"(0x[0-9a-fA-F]+|\d+)"
+    index = r"(?:_\s*(\d+)|\[\s*(\d+)\s*\]|(\d+))"
+    aliases = (
+        ("n", r"(?:n|modulus)"),
+        ("e", r"(?:e|exponent)"),
+        ("c", r"(?:ciphertext|encrypted|ct|c)"),
+    )
+    assignments: dict[str, dict[str, int]] = {}
+    for field, name_pattern in aliases:
+        pattern = re.compile(
+            rf"(?<![A-Za-z0-9]){name_pattern}{index}\s*[:=]\s*{integer}",
+            re.IGNORECASE,
+        )
+        for match in pattern.finditer(text):
+            sample_index = next(value for value in match.groups()[:3] if value is not None)
+            raw_value = match.groups()[3]
+            value = int(raw_value, 0) if raw_value.lower().startswith("0x") else int(raw_value, 10)
+            assignments.setdefault(sample_index, {}).setdefault(field, value)
+            if len(assignments) >= max_samples:
+                break
+    ordered = sorted(assignments, key=lambda value: (int(value), value))
+    return [
+        (assignments[key]["n"], assignments[key]["e"], assignments[key]["c"])
+        for key in ordered
+        if {"n", "e", "c"}.issubset(assignments[key])
+    ][:max_samples]
 
 
 def _aethmap_sealer_parameters(source: bytes) -> dict[str, int]:
@@ -691,7 +903,15 @@ def _classical_transforms(text: str, task: str) -> list[dict[str, object]]:
     if not match:
         return records
     ciphertext = match.group(1)
-    if "rot" in task or "caesar" in task:
+    if "rot47" in task:
+        decoded = "".join(
+            chr((ord(char) - 33 + 47) % 94 + 33)
+            if 33 <= ord(char) <= 126
+            else char
+            for char in ciphertext
+        )
+        records.append({"method": "rot47", "plaintext": decoded.encode(), "parameters": {"rotation": 47}})
+    elif "rot" in task or "caesar" in task:
         # Accept both compact challenge syntax (``Caesar 7``/``ROT7``) and
         # ordinary prose (``Caesar-shifted by 7``/``rotation of 7``).  The
         # number remains condition-backed by the task statement; we never try
@@ -711,6 +931,11 @@ def _classical_transforms(text: str, task: str) -> list[dict[str, object]]:
             for char in ciphertext
         )
         records.append({"method": f"caesar-{shift}", "plaintext": decoded.encode(), "parameters": {"shift": shift}})
+    if "atbash" in task:
+        alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
+        reversed_alphabet = "ZYXWVUTSRQPONMLKJIHGFEDCBAzyxwvutsrqponmlkjihgfedcba"
+        decoded = ciphertext.translate(str.maketrans(alphabet, reversed_alphabet))
+        records.append({"method": "atbash", "plaintext": decoded.encode(), "parameters": {"alphabet": "Latin"}})
     if "affine" in task:
         a_match = re.search(r"\ba\s*[:=]\s*(\d+)", task, re.I)
         b_match = re.search(r"\bb\s*[:=]\s*(\d+)", task, re.I)
@@ -737,6 +962,156 @@ def _classical_transforms(text: str, task: str) -> list[dict[str, object]]:
                 else:
                     out.append(char)
             records.append({"method": "vigenere", "plaintext": "".join(out).encode(), "parameters": {"key": key}})
+    return records
+
+
+_MORSE_TO_TEXT = {
+    ".-": "A", "-...": "B", "-.-.": "C", "-..": "D", ".": "E",
+    "..-.": "F", "--.": "G", "....": "H", "..": "I", ".---": "J",
+    "-.-": "K", ".-..": "L", "--": "M", "-.": "N", "---": "O",
+    ".--.": "P", "--.-": "Q", ".-.": "R", "...": "S", "-": "T",
+    "..-": "U", "...-": "V", ".--": "W", "-..-": "X", "-.--": "Y",
+    "--..": "Z", "-----": "0", ".----": "1", "..---": "2",
+    "...--": "3", "....-": "4", ".....": "5", "-....": "6",
+    "--...": "7", "---..": "8", "----.": "9", "-.-.--": "!",
+    "..--..": "?", ".-.-.-": ".", "--..--": ",", "-.-.-.": ";",
+    "---...": ":", "-....-": "-", "..--.-": "_", ".-..-.": '"',
+    ".----.": "'", "-..-.": "/", "-.--.": "(", "-.--.-": ")",
+}
+_NATO_TO_TEXT = {
+    name: chr(ord("A") + index)
+    for index, name in enumerate(
+        (
+            "alpha", "bravo", "charlie", "delta", "echo", "foxtrot", "golf",
+            "hotel", "india", "juliett", "kilo", "lima", "mike", "november",
+            "oscar", "papa", "quebec", "romeo", "sierra", "tango", "uniform",
+            "victor", "whiskey", "xray", "yankee", "zulu",
+        )
+    )
+}
+_NATO_TO_TEXT.update({"alfa": "A", "juliet": "J", "x-ray": "X"})
+_T9_MULTI_TAP = {
+    "2": "ABC", "3": "DEF", "4": "GHI", "5": "JKL", "6": "MNO",
+    "7": "PQRS", "8": "TUV", "9": "WXYZ",
+}
+
+
+def _labelled_ciphertext_line(text: str) -> str | None:
+    match = re.search(
+        r"(?im)^\s*(?:cipher(?:text)?|encoded|message|text)\s*[:=]\s*([^\r\n]+)",
+        text,
+    )
+    return match.group(1).strip() if match else None
+
+
+def _decode_morse_field(value: str) -> bytes | None:
+    decoded_words: list[str] = []
+    for word in re.split(r"\s*/\s*", value.strip()):
+        characters: list[str] = []
+        for token in word.split():
+            if token in "{}[]()_":
+                characters.append(token)
+            elif token in _MORSE_TO_TEXT:
+                characters.append(_MORSE_TO_TEXT[token])
+            else:
+                return None
+        if characters:
+            decoded_words.append("".join(characters))
+    if not decoded_words:
+        return None
+    return " ".join(decoded_words).encode("ascii")
+
+
+def _decode_nato_field(value: str) -> bytes | None:
+    output: list[str] = []
+    word_count = 0
+    for token in value.split():
+        normalized = token.strip(",.;:").casefold()
+        if normalized in _NATO_TO_TEXT:
+            output.append(_NATO_TO_TEXT[normalized])
+            word_count += 1
+        elif token in "{}[]()_-.!":
+            output.append(token)
+        else:
+            return None
+    if word_count < 3:
+        return None
+    return "".join(output).encode("ascii")
+
+
+def _decode_t9_field(value: str) -> bytes | None:
+    output: list[str] = []
+    groups = value.split()
+    if not groups:
+        return None
+    for group in groups:
+        if group in "{}[]()_-.!":
+            output.append(group)
+        elif group in {"0", "*"}:
+            output.append(" ")
+        elif len(group) <= 4 and group[0] in _T9_MULTI_TAP and set(group) == {group[0]}:
+            letters = _T9_MULTI_TAP[group[0]]
+            if len(group) > len(letters):
+                return None
+            output.append(letters[len(group) - 1])
+        else:
+            return None
+    return "".join(output).encode("ascii")
+
+
+def _rail_fence_decrypt(ciphertext: str, rails: int) -> str | None:
+    if len(ciphertext) > 1_000_000 or not 2 <= rails <= min(len(ciphertext), 256):
+        return None
+    rows: list[int] = []
+    row, direction = 0, 1
+    for _ in ciphertext:
+        rows.append(row)
+        if row == 0:
+            direction = 1
+        elif row == rails - 1:
+            direction = -1
+        row += direction
+    counts = [0] * rails
+    for row_index in rows:
+        counts[row_index] += 1
+    rails_data: list[str] = []
+    offset = 0
+    for count in counts:
+        rails_data.append(ciphertext[offset : offset + count])
+        offset += count
+    positions = [0] * rails
+    plaintext: list[str] = []
+    for row_index in rows:
+        plaintext.append(rails_data[row_index][positions[row_index]])
+        positions[row_index] += 1
+    return "".join(plaintext)
+
+
+def _katana_inspired_text_transforms(text: str, task: str) -> list[dict[str, object]]:
+    """Small, offline-only transforms selected by explicit task wording."""
+    value = _labelled_ciphertext_line(text)
+    if value is None:
+        return []
+    records: list[dict[str, object]] = []
+    if "morse" in task:
+        plaintext = _decode_morse_field(value)
+        if plaintext is not None:
+            records.append({"method": "morse", "plaintext": plaintext, "parameters": {"word_separator": "/"}})
+    if "nato" in task or "phonetic" in task:
+        plaintext = _decode_nato_field(value)
+        if plaintext is not None:
+            records.append({"method": "nato-phonetic", "plaintext": plaintext, "parameters": {"alphabet": "NATO"}})
+    if "t9" in task or "multi-tap" in task:
+        plaintext = _decode_t9_field(value)
+        if plaintext is not None:
+            records.append({"method": "t9-multi-tap", "plaintext": plaintext, "parameters": {"separator": "whitespace"}})
+    if "rail fence" in task or "railfence" in task:
+        rail_match = re.search(r"\b(\d{1,3})\s+rails?\b|\brails?\s*[:=]\s*(\d{1,3})\b", task)
+        if rail_match:
+            rails = int(rail_match.group(1) or rail_match.group(2))
+            plaintext = _rail_fence_decrypt(value, rails)
+            if plaintext is not None:
+                records.append({"method": "rail-fence", "plaintext": plaintext.encode(), "parameters": {"rails": rails}})
     return records
 
 
@@ -882,6 +1257,15 @@ class CryptoSolver:
             "length extension",
             "vigenere",
             "rot",
+            "rot47",
+            "atbash",
+            "morse",
+            "nato",
+            "phonetic",
+            "t9",
+            "multi-tap",
+            "rail fence",
+            "railfence",
             "shuffle",
             "permutation",
             "transposition",
@@ -913,6 +1297,39 @@ class CryptoSolver:
                             hit["triage"] = "candidate"
                             hit.pop("triage_reason", None)
                 result.candidates.extend(hits)
+
+            def handoff_intermediate(payload: bytes, method: str) -> None:
+                """Queue an intermediate only when the condition names a chain."""
+
+                nonlocal wrote
+                families = _explicit_transform_families(context.task_text or "")
+                if len(families) < 2 or not payload or len(payload) > context.limits.max_bytes:
+                    return
+                text_view = payload.decode("utf-8", errors="replace")
+                if FlagMatcher().scan(text_view, source=str(context.input_path), analyzer=method):
+                    return
+                digest = hashlib.sha256(payload).hexdigest()
+                path = root / f"chain-stage-{digest[:16]}.bin"
+                path.parent.mkdir(parents=True, exist_ok=True)
+                if not path.exists():
+                    path.write_bytes(payload)
+                if str(path) not in result.derived_inputs and len(result.derived_inputs) < 16:
+                    result.derived_inputs.append(str(path))
+                if str(path) not in result.artifacts:
+                    result.artifacts.append(str(path))
+                result.steps.append(
+                    {
+                        "name": "handoff-explicit-transform-chain",
+                        "status": "derived",
+                        "details": {
+                            "method": method,
+                            "next_stage_hints": list(families),
+                            "output": str(path),
+                            "bytes": len(payload),
+                        },
+                    }
+                )
+                wrote = True
 
             if data.startswith(b"AETH"):
                 sealer_path = _aethmap_sealer_path(context)
@@ -962,6 +1379,14 @@ class CryptoSolver:
             for record in _classical_transforms(text, task):
                 plaintext = bytes(record["plaintext"])
                 scan(plaintext, str(context.input_path), str(record["method"]))
+                handoff_intermediate(plaintext, str(record["method"]))
+                result.steps.append({"name": str(record["method"]), "status": "ok", "details": record.get("parameters", {})})
+                wrote = True
+
+            for record in _katana_inspired_text_transforms(text, task):
+                plaintext = bytes(record["plaintext"])
+                scan(plaintext, str(context.input_path), str(record["method"]))
+                handoff_intermediate(plaintext, str(record["method"]))
                 result.steps.append({"name": str(record["method"]), "status": "ok", "details": record.get("parameters", {})})
                 wrote = True
 
@@ -1092,6 +1517,71 @@ class CryptoSolver:
                                 }
                             )
                             wrote = True
+
+            if rsa_hint and _is_task_evidence_anchor(context):
+                broadcast_exponent = _parse_ints(evidence_text, ("e",)).get("e")
+                broadcast_samples = _parse_indexed_rsa_samples(
+                    evidence_text, max_samples=min(context.limits.max_files, 64)
+                )
+                if broadcast_exponent is not None:
+                    broadcast = recover_rsa_broadcast(
+                        broadcast_samples,
+                        broadcast_exponent,
+                        max_samples=min(context.limits.max_files, 64),
+                    )
+                    if broadcast is not None:
+                        plaintext = bytes(broadcast["plaintext"])
+                        scan(plaintext, str(context.input_path), "rsa-broadcast-hastad", validated=True)
+                        result.steps.append(
+                            {
+                                "name": "rsa-broadcast-hastad",
+                                "status": "candidate",
+                                "details": {
+                                    "exponent": broadcast["exponent"],
+                                    "samples_used": broadcast["samples_used"],
+                                    "modulus_product_bits": broadcast["modulus_product_bits"],
+                                    "validation": "exact CRT root and ciphertext round-trip verified",
+                                },
+                            }
+                        )
+                        wrote = True
+
+                shared_prime_samples = _parse_indexed_rsa_key_samples(
+                    evidence_text, max_samples=min(context.limits.max_files, 64)
+                )
+                for shared_prime in recover_rsa_shared_primes(
+                    shared_prime_samples,
+                    max_samples=min(context.limits.max_files, 64),
+                ):
+                    plaintext = bytes(shared_prime["plaintext"])
+                    known_values = {str(item.get("value", "")) for item in result.candidates}
+                    start = len(result.candidates)
+                    scan(
+                        plaintext,
+                        str(context.input_path),
+                        "rsa-shared-prime-batch-gcd",
+                        validated=bool(shared_prime["roundtrip_verified"]),
+                    )
+                    result.candidates[start:] = [
+                        item
+                        for item in result.candidates[start:]
+                        if str(item.get("value", "")) not in known_values
+                    ]
+                    new_candidate_count = len(result.candidates) - start
+                    result.steps.append(
+                        {
+                            "name": "rsa-shared-prime-batch-gcd",
+                            "status": "candidate" if new_candidate_count else "ok",
+                            "details": {
+                                "key_index": shared_prime["key_index"],
+                                "peer_index": shared_prime["peer_index"],
+                                "shared_factor_bits": shared_prime["shared_factor_bits"],
+                                "modulus_bits": shared_prime["modulus_bits"],
+                                "roundtrip_verified": shared_prime["roundtrip_verified"],
+                            },
+                        }
+                    )
+                    wrote = True
 
             stream_evidence = _squared_xor_stream_evidence(context)
             flag_length_match = re.search(

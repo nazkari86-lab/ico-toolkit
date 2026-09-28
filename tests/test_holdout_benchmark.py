@@ -24,8 +24,9 @@ class HoldoutBenchmarkTests(unittest.TestCase):
                     manifest_path,
                     (
                         HoldoutRecord("task-a", _digest("ico{alpha}"), {"family": "web"}),
-                        HoldoutRecord("task-b", _digest("ico{beta}"), {"family": "crypto"}),
+                        HoldoutRecord("task-b", _digest("ico{beta}"), {"family": "crypto", "difficulty": "hard"}),
                     ),
+                    metadata={"corpus_revision": "fixture-commit"},
                 )
                 document = json.loads(manifest_path.read_text(encoding="utf-8"))
                 self.assertNotIn("ico{alpha}", manifest_path.read_text(encoding="utf-8"))
@@ -35,10 +36,12 @@ class HoldoutBenchmarkTests(unittest.TestCase):
                 report.write_text(
                     json.dumps(
                         {
+                            "metadata": {"solver_revision": "solver-abc", "wall_clock_seconds": 12.5},
                             "slots": [{"task_id": "task-a"}, {"task_id": "task-b"}],
                             "candidates": [
                                 {"task_id": "task-a", "value": "ico{alpha}"},
-                                {"task_id": "task-b", "value": "ico{wrong}"},
+                                {"task_id": "task-b", "value": "ico{wrong}", "analyzer": "generic"},
+                                {"task_id": "task-b", "value": "ico{wrong}", "analyzer": "generic"},
                                 {"task_id": "task-b", "value": "ico{beta}"},
                                 {"task_id": "task-b", "value": "ico{beta}"},
                                 {"task_id": "unknown", "value": "ico{noise}"},
@@ -51,8 +54,20 @@ class HoldoutBenchmarkTests(unittest.TestCase):
                 self.assertEqual(score["verified_count"], 2)
                 self.assertEqual(score["missing_tasks"], [])
                 self.assertEqual(score["false_positive_count"], 2)
-                self.assertEqual(score["duplicate_count"], 1)
+                self.assertEqual(score["duplicate_count"], 2)
+                self.assertEqual(score["false_positive_analyzers"], {"generic": 1, "unknown": 1})
                 self.assertFalse(score["holdout_pass"])
+                self.assertEqual(score["solver_revision"], "solver-abc")
+                self.assertEqual(score["corpus_revision"], "fixture-commit")
+                self.assertEqual(score["duration_seconds"], 12.5)
+                self.assertEqual(score["by_family"]["web"]["verified"], 1)
+                self.assertEqual(score["by_difficulty"]["hard"]["total"], 1)
+                self.assertLessEqual(score["wilson_95"]["lower"], score["verified_score"])
+                self.assertGreaterEqual(score["wilson_95"]["upper"], score["verified_score"])
+                score_text = json.dumps(score, ensure_ascii=False)
+                self.assertNotIn("ico{wrong}", score_text)
+                self.assertNotIn("ico{noise}", score_text)
+                self.assertNotIn("value", score_text)
 
     def test_plaintext_answer_fields_are_rejected(self) -> None:
         from tempfile import TemporaryDirectory

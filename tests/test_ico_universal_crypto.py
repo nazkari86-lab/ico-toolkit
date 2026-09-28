@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import base64
 import hashlib
 import math
 import random
@@ -94,6 +95,97 @@ class UniversalCryptoTests(unittest.TestCase):
             SolverLimits(max_bytes=1024, max_files=10, max_depth=1, timeout_seconds=1.0),
         )
         self.assertEqual(result[0]["plaintext"], b"OK")
+
+    def test_rsa_broadcast_recovers_only_exact_crt_power(self):
+        message = int.from_bytes(b"ICO{x}", "big")
+        exponent = 3
+        moduli = [(1 << 61) - 1, (1 << 61) - 3, (1 << 61) - 5]
+        recover = getattr(ico_universal_crypto, "recover_rsa_broadcast", None)
+        self.assertIsNotNone(recover, "Hastad broadcast solver is not implemented")
+
+        result = recover([(modulus, pow(message, exponent, modulus)) for modulus in moduli], exponent)
+
+        self.assertEqual(result["plaintext"], b"ICO{x}")
+        self.assertEqual(result["method"], "rsa-broadcast-hastad")
+        self.assertEqual(result["samples_used"], exponent)
+
+    def test_rsa_broadcast_rejects_shared_modulus_factors_and_inexact_roots(self):
+        recover = getattr(ico_universal_crypto, "recover_rsa_broadcast", None)
+        self.assertIsNotNone(recover, "Hastad broadcast solver is not implemented")
+        self.assertIsNone(recover([(15, 7), (21, 7), (33, 7)], 3))
+        self.assertIsNone(recover([(101, 2), (103, 3), (107, 4)], 3))
+
+    def test_rsa_shared_prime_batch_gcd_decrypts_only_with_verified_roundtrip(self):
+        p, q1, q2, exponent = 1_000_000_007, 1_000_000_009, 1_000_000_033, 65_537
+        message = int.from_bytes(b"ICO{x}", "big")
+        samples = [
+            (p * q1, exponent, pow(message, exponent, p * q1)),
+            (p * q2, exponent, pow(message, exponent, p * q2)),
+            (1_000_000_087 * 1_000_000_093, exponent, 12345),
+        ]
+
+        recovered = ico_universal_crypto.recover_rsa_shared_primes(samples)
+
+        self.assertEqual(recovered[0]["plaintext"], b"ICO{x}")
+        self.assertTrue(recovered[0]["roundtrip_verified"])
+        self.assertEqual(recovered[0]["method"], "rsa-shared-prime-batch-gcd")
+        self.assertEqual(ico_universal_crypto.recover_rsa_shared_primes(samples[1:]), [])
+
+    def test_rsa_shared_prime_parser_pairs_only_explicitly_indexed_values(self):
+        samples = ico_universal_crypto._parse_indexed_rsa_key_samples(
+            "n_2=15 e_2=3 c_2=8\nn[1]=21 exponent[1]=5 ciphertext[1]=7\nn=33 e=7 c=2",
+            max_samples=8,
+        )
+
+        self.assertEqual(samples, [(21, 5, 7), (15, 3, 8)])
+
+    def test_crypto_solver_recovers_rsa_with_a_shared_prime_across_related_files(self):
+        p, q1, q2, exponent = 1_000_000_007, 1_000_000_009, 1_000_000_033, 65_537
+        message = int.from_bytes(b"ICO{x}", "big")
+        n1, n2 = p * q1, p * q2
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "a_challenge.py"
+            keys = root / "z_public_values.txt"
+            source.write_text("# RSA key reuse challenge\n", encoding="utf-8")
+            keys.write_text(
+                f"n_1={n1}\ne_1={exponent}\nc_1={pow(message, exponent, n1)}\n"
+                f"n_2={n2}\ne_2={exponent}\nc_2={pow(message, exponent, n2)}\n",
+                encoding="utf-8",
+            )
+
+            result = CryptoSolver().solve(
+                _context(root, source, "RSA shared-prime key reuse", related_paths=(keys,))
+            )
+
+        hit = next((item for item in result.candidates if item["value"] == "ICO{x}"), None)
+        self.assertIsNotNone(hit, result.steps)
+        self.assertEqual(hit["validation"], "cryptographic round-trip verified")
+        self.assertTrue(any(step["name"] == "rsa-shared-prime-batch-gcd" for step in result.steps))
+
+    def test_crypto_solver_recovers_numbered_rsa_broadcast_samples_from_task_text(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "a_challenge.py"
+            samples_file = root / "z_samples.txt"
+            message = int.from_bytes(b"ICO{x}", "big")
+            exponent = 3
+            moduli = [(1 << 61) - 1, (1 << 61) - 3, (1 << 61) - 5]
+            lines = []
+            for index, modulus in enumerate(moduli, 1):
+                lines.extend((f"n_{index} = {modulus}", f"c_{index} = {pow(message, exponent, modulus)}"))
+            source.write_text("# RSA broadcast, same unpadded message and exponent e=3.\n", encoding="utf-8")
+            samples_file.write_text("\n".join(lines), encoding="utf-8")
+
+            result = CryptoSolver().solve(
+                _context(root, source, "RSA broadcast challenge", related_paths=(samples_file,))
+            )
+
+        hit = next((candidate for candidate in result.candidates if candidate["value"] == "ICO{x}"), None)
+        self.assertIsNotNone(hit, result.steps)
+        self.assertEqual(result.status, "candidate")
+        self.assertEqual(hit["validation"], "cryptographic round-trip verified")
+        self.assertTrue(any(step["name"] == "rsa-broadcast-hastad" for step in result.steps))
 
     def test_crypto_solver_joins_source_and_ciphertext_for_small_prime_rsa(self):
         with tempfile.TemporaryDirectory() as directory:
@@ -231,6 +323,81 @@ class UniversalCryptoTests(unittest.TestCase):
             task = "The field named cipher is Caesar-shifted by 7. Decode it."
             result = CryptoSolver().solve(_context(root, source, task))
         self.assertIn("ico{bench_crypto_easy_caesar}", {item["value"] for item in result.candidates})
+
+    def test_crypto_solver_hands_off_explicit_multistage_transform_output(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cipher.txt"
+            encoded = base64.b64encode(b"ico{rot13_base64_chain}")
+            rot13_table = bytes.maketrans(
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+                b"NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm",
+            )
+            source.write_bytes(b"cipher=" + encoded.translate(rot13_table))
+            task = "Crypto task: decode the ciphertext with ROT13, then decode the result with Base64."
+            result = CryptoSolver().solve(_context(root, source, task))
+            self.assertEqual(len(result.derived_inputs), 1, result.steps)
+            intermediate = Path(result.derived_inputs[0]).read_bytes()
+
+        self.assertEqual(result.candidates, [])
+        self.assertEqual(intermediate, encoded)
+        self.assertTrue(any(step["name"] == "handoff-explicit-transform-chain" for step in result.steps))
+
+    def test_crypto_solver_does_not_handoff_a_single_explicit_transform(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cipher.txt"
+            encoded = base64.b64encode(b"ico{single_transform}")
+            rot13_table = bytes.maketrans(
+                b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
+                b"NOPQRSTUVWXYZABCDEFGHIJKLMnopqrstuvwxyzabcdefghijklm",
+            )
+            source.write_bytes(b"cipher=" + encoded.translate(rot13_table))
+            result = CryptoSolver().solve(_context(root, source, "ROT13 crypto task"))
+
+        self.assertEqual(result.derived_inputs, [])
+
+    def test_katana_inspired_offline_text_decoders_are_condition_backed(self):
+        cases = (
+            ("cipher=.. -.-. --- { ..-. .-.. .- --. }", "Morse code challenge", "ICO{FLAG}"),
+            ("cipher=India Charlie Oscar { Foxtrot Lima Alfa Golf }", "NATO phonetic alphabet", "ICO{FLAG}"),
+            ("cipher=RXL{ZGYZHS}", "Atbash cipher", "ICO{ATBASH}"),
+            ("cipher=:4@LC@EcfN", "ROT47 cipher", "ico{rot47}"),
+            ("cipher=444 222 666 { 333 555 2 4 }", "T9 multi-tap cipher", "ICO{FLAG}"),
+            ("cipher=ir_cc{alfneoie}", "Rail fence cipher with 3 rails", "ico{rail_fence}"),
+        )
+        for encoded, task, expected in cases:
+            with self.subTest(task=task), tempfile.TemporaryDirectory() as directory:
+                root = Path(directory)
+                source = root / "cipher.txt"
+                source.write_text(encoded, encoding="utf-8")
+                context = _context(root, source, task)
+                solver = CryptoSolver()
+                self.assertIsNotNone(solver.detect(context), "explicit task hint should route to CryptoSolver")
+                result = solver.solve(context)
+            self.assertIn(expected, {item["value"] for item in result.candidates}, result.steps)
+
+    def test_katana_inspired_rail_fence_requires_rails_from_condition(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cipher.txt"
+            source.write_text("cipher=WECRLTEERDSOEEFEAOCAIVDEN", encoding="utf-8")
+            result = CryptoSolver().solve(_context(root, source, "Rail fence transposition cipher"))
+        self.assertFalse(result.candidates)
+
+    def test_katana_inspired_decoders_do_not_run_without_explicit_task_hint(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / "cipher.txt"
+            source.write_text("cipher=RXL{ZGYZHS}", encoding="utf-8")
+            result = CryptoSolver().solve(_context(root, source, "miscellaneous text"))
+        self.assertFalse(result.candidates)
+
+    def test_rail_fence_decoder_matches_standard_three_rail_vector(self):
+        self.assertEqual(
+            ico_universal_crypto._rail_fence_decrypt("WECRLTEERDSOEEFEAOCAIVDEN", 3),
+            "WEAREDISCOVEREDFLEEATONCE",
+        )
 
     def test_crypto_solver_recovers_known_plaintext_permutation(self):
         with tempfile.TemporaryDirectory() as directory:

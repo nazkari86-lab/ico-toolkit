@@ -128,7 +128,7 @@ def _iter_directory(path: Path) -> Iterable[Path]:
             for name in directories
             if not (current_path / name).is_symlink()
             and not name.startswith(".")
-            and name not in {"ico-scan-runs", "commands", "artifacts", "__pycache__"}
+            and name not in {"ico-scan-runs", "ico-solve-handoffs", "commands", "artifacts", "__pycache__"}
         ]
         for filename in sorted(files):
             candidate = current_path / filename
@@ -174,7 +174,7 @@ def _task_manifests(
     """Build bounded, read-only evidence manifests for discovered task roots."""
 
     manifests: dict[Path, tuple[Path, ...]] = {}
-    ignored = {"ico-scan-runs", "commands", "artifacts", "__pycache__"}
+    ignored = {"ico-scan-runs", "ico-solve-handoffs", "commands", "artifacts", "__pycache__"}
     for raw_root in task_dirs:
         root = raw_root.resolve()
         statement = task_manifest_path(root)
@@ -1161,6 +1161,12 @@ def run_scan(
         for raw_input in derived_inputs:
             try:
                 raw_path = Path(str(raw_input)).expanduser()
+                if raw_path.name.casefold() in {
+                    "historical-solution.md",
+                    "playbook.md",
+                    "wolf-protocol-review.md",
+                }:
+                    raise ValueError("reference or guidance document is not solver input")
                 if raw_path.is_symlink():
                     raise ValueError("symbolic links are not accepted")
                 derived_path = raw_path.resolve()
@@ -1207,27 +1213,76 @@ def run_scan(
                 }
             )
 
-    def record_hits(hits: list[dict[str, Any]], artifact_path: Path, analyzer: str) -> None:
+    def candidate_scope(artifact_path: Path, task_root: Path | None) -> str:
+        scoped_path = task_root if task_root is not None else artifact_path
+        try:
+            return str(scoped_path.resolve())
+        except OSError:
+            return str(scoped_path)
+
+    def merge_candidate_evidence(
+        candidate: dict[str, Any],
+        artifact_path: Path,
+        *,
+        scope: str,
+    ) -> bool:
+        key = (str(candidate["value"]), scope)
+        if key not in candidate_keys:
+            candidate_keys[key] = len(report["candidates"])
+            candidate["analyzers"] = [candidate["analyzer"]]
+            candidate["artifacts"] = [str(artifact_path)]
+            candidate["evidence_sources"] = [
+                {
+                    "analyzer": candidate["analyzer"],
+                    "source": candidate.get("source", str(artifact_path)),
+                    "line": candidate.get("line", 1),
+                    "artifact": str(artifact_path),
+                }
+            ]
+            if candidate.get("task_id") is not None:
+                candidate["task_ids"] = [str(candidate["task_id"])]
+            report["candidates"].append(candidate)
+            return True
+
+        existing = report["candidates"][candidate_keys[key]]
+        analyzer = str(candidate["analyzer"])
+        analyzers = existing.setdefault("analyzers", [existing.get("analyzer", analyzer)])
+        if analyzer not in analyzers:
+            analyzers.append(analyzer)
+        artifacts = existing.setdefault("artifacts", [str(existing.get("artifact", artifact_path))])
+        if str(artifact_path) not in artifacts:
+            artifacts.append(str(artifact_path))
+        evidence = {
+            "analyzer": analyzer,
+            "source": candidate.get("source", str(artifact_path)),
+            "line": candidate.get("line", 1),
+            "artifact": str(artifact_path),
+        }
+        evidence_sources = existing.setdefault("evidence_sources", [])
+        if evidence not in evidence_sources:
+            evidence_sources.append(evidence)
+        if candidate.get("state") == "hash-verified":
+            existing["state"] = "hash-verified"
+            existing["verification"] = candidate.get("verification", existing.get("verification"))
+        task_id = candidate.get("task_id")
+        if task_id is not None:
+            task_ids = existing.setdefault("task_ids", [str(existing["task_id"])] if existing.get("task_id") is not None else [])
+            if str(task_id) not in task_ids:
+                task_ids.append(str(task_id))
+        return False
+
+    def record_hits(
+        hits: list[dict[str, Any]],
+        artifact_path: Path,
+        analyzer: str,
+        task_root: Path | None = None,
+    ) -> None:
         for hit in hits:
             candidate = _ensure_candidate_triage(dict(hit))
             candidate["artifact"] = str(artifact_path)
             candidate["analyzer"] = analyzer
-            key = (candidate["value"], candidate["artifact"])
-            if key in candidate_keys:
-                existing = report["candidates"][candidate_keys[key]]
-                analyzers = existing.setdefault("analyzers", [existing["analyzer"]])
-                if candidate["analyzer"] not in analyzers:
-                    analyzers.append(candidate["analyzer"])
-                existing.setdefault("evidence_sources", []).append(
-                    {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-                )
+            if not merge_candidate_evidence(candidate, artifact_path, scope=candidate_scope(artifact_path, task_root)):
                 continue
-            candidate["analyzers"] = [candidate["analyzer"]]
-            candidate["evidence_sources"] = [
-                {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-            ]
-            candidate_keys[key] = len(report["candidates"])
-            report["candidates"].append(candidate)
             if verbose:
                 print(
                     f"{'LOW-PRIORITY FLAG-LIKE VALUE' if _is_low_priority_candidate(candidate) else 'FOUND CANDIDATE'}: {candidate['value']} "
@@ -1240,6 +1295,12 @@ def run_scan(
         for hit in serialized.get("candidates", []):
             _ensure_candidate_triage(hit)
         report["task_results"].append(serialized)
+        enqueue_derived_inputs(
+            result,
+            source=Path(result.task_dir),
+            depth=0,
+            task_root=Path(result.task_dir),
+        )
         for hit in serialized.get("candidates", []):
             candidate = _ensure_candidate_triage(dict(hit))
             candidate.setdefault("source", candidate.get("evidence", candidate.get("artifact", str(result.task_dir))))
@@ -1247,22 +1308,12 @@ def run_scan(
             candidate.setdefault("analyzer", f"task-solver:{result.solver}")
             candidate.setdefault("artifact", str(result.task_dir))
             candidate.setdefault("task_id", result.task_id)
-            key = (candidate["value"], candidate["artifact"])
-            if key in candidate_keys:
-                existing = report["candidates"][candidate_keys[key]]
-                if candidate.get("state") == "hash-verified":
-                    existing["state"] = "hash-verified"
-                    existing["verification"] = candidate.get("verification", existing.get("verification"))
-                existing.setdefault("evidence_sources", []).append(
-                    {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-                )
+            if not merge_candidate_evidence(
+                candidate,
+                Path(str(candidate["artifact"])),
+                scope=candidate_scope(Path(result.task_dir), Path(result.task_dir)),
+            ):
                 continue
-            candidate["analyzers"] = [candidate["analyzer"]]
-            candidate["evidence_sources"] = [
-                {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-            ]
-            candidate_keys[key] = len(report["candidates"])
-            report["candidates"].append(candidate)
             if verbose:
                 print(
                     f"{'LOW-PRIORITY FLAG-LIKE VALUE' if _is_low_priority_candidate(candidate) else 'FOUND CANDIDATE'}: {candidate['value']} "
@@ -1277,6 +1328,12 @@ def run_scan(
         report["task_results"].append(serialized)
         report["quals_task_results"].append(serialized)
         report["reference_candidates"].extend(dict(reference) for reference in result.references)
+        enqueue_derived_inputs(
+            result,
+            source=Path(result.task_dir),
+            depth=0,
+            task_root=Path(result.task_dir),
+        )
         for hit in serialized.get("candidates", []):
             candidate = _ensure_candidate_triage(dict(hit))
             candidate.setdefault("source", candidate.get("evidence", str(result.task_dir)))
@@ -1284,22 +1341,12 @@ def run_scan(
             candidate.setdefault("analyzer", f"quals-solver:{result.solver}")
             candidate.setdefault("artifact", str(result.task_dir))
             candidate.setdefault("task_id", result.task_id)
-            key = (candidate["value"], candidate["artifact"])
-            if key in candidate_keys:
-                existing = report["candidates"][candidate_keys[key]]
-                if candidate.get("state") == "hash-verified":
-                    existing["state"] = "hash-verified"
-                    existing["verification"] = candidate.get("verification", existing.get("verification"))
-                existing.setdefault("evidence_sources", []).append(
-                    {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-                )
+            if not merge_candidate_evidence(
+                candidate,
+                Path(str(candidate["artifact"])),
+                scope=candidate_scope(Path(result.task_dir), Path(result.task_dir)),
+            ):
                 continue
-            candidate["analyzers"] = [candidate["analyzer"]]
-            candidate["evidence_sources"] = [
-                {"analyzer": candidate["analyzer"], "source": candidate["source"], "line": candidate["line"]}
-            ]
-            candidate_keys[key] = len(report["candidates"])
-            report["candidates"].append(candidate)
             if verbose:
                 print(
                     f"{'LOW-PRIORITY FLAG-LIKE VALUE' if _is_low_priority_candidate(candidate) else 'FOUND CANDIDATE'}: {candidate['value']} "
@@ -1339,7 +1386,9 @@ def run_scan(
             candidate.setdefault("state", "candidate")
             hits.append(candidate)
         if hits:
-            record_hits(hits, artifact_path, f"universal:{result.solver}")
+            raw_task_root = (context.metadata or {}).get("task_root") if context is not None else None
+            scope_root = Path(str(raw_task_root)) if raw_task_root else None
+            record_hits(hits, artifact_path, f"universal:{result.solver}", scope_root)
 
     for quals_root in quals_roots:
         process_quals_root(quals_root)
@@ -1398,10 +1447,12 @@ def run_scan(
             continue
         seen_hashes.add(digest)
         classification = classify(path, runner)
+        path_stat = path.stat()
         item: dict[str, Any] = {
             "path": str(path),
             "sha256": digest,
-            "size": path.stat().st_size,
+            "size": path_stat.st_size,
+            "mtime_ns": path_stat.st_mtime_ns,
             "depth": artifact.depth,
             "parent": artifact.parent,
             "classification": classification.to_dict(),
@@ -1520,7 +1571,7 @@ def run_scan(
                         depth=artifact.depth,
                         task_root=task_root,
                     )
-        record_hits(matcher.scan(read_text_views(path), source=str(path), analyzer="raw-bytes"), path, "raw-bytes")
+        record_hits(matcher.scan(read_text_views(path), source=str(path), analyzer="raw-bytes"), path, "raw-bytes", task_root)
 
         # GNU ``strings -el`` is unavailable on the macOS toolchain.  Keep
         # the same evidence pass in-process so UTF-16LE data is portable and
@@ -1536,6 +1587,7 @@ def run_scan(
                 ),
                 path,
                 "strings-utf16le",
+                task_root,
             )
 
         # Unknown tasks often wrap the flag in a textual encoding without a
@@ -1561,7 +1613,7 @@ def run_scan(
                     hit["token"] = view["token"]
                     hit["offset"] = view["offset"]
                     hit["evidence"] = str(derived_path)
-                record_hits(hits, path, f"decode-{view['encoding']}")
+                record_hits(hits, path, f"decode-{view['encoding']}", task_root)
                 events.append(
                     {
                         "type": "decoded-view",
@@ -1624,7 +1676,7 @@ def run_scan(
                     hit["key"] = view["key"]
                     hit["offset"] = view["offset"]
                     hit["crib"] = view["prefix"].decode("ascii", errors="replace")
-                record_hits(hits, path, "xor-single-byte")
+                record_hits(hits, path, "xor-single-byte", task_root)
 
         all_profiles = profile_selector(classification)
         profiles = filter_profiles_for_mode(all_profiles, mode)
@@ -1711,7 +1763,12 @@ def run_scan(
                 )
             output = result.combined_output()
             if output:
-                record_hits(matcher.scan(output, source=result.log_path or str(path), analyzer=profile.name), path, profile.name)
+                record_hits(
+                    matcher.scan(output, source=result.log_path or str(path), analyzer=profile.name),
+                    path,
+                    profile.name,
+                    task_root,
+                )
             if result.missing:
                 events.append(
                     {

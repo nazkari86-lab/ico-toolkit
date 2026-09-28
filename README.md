@@ -85,6 +85,17 @@ ico-solve path/to/story --mode full --debug ./ico-solve-debug
 ico-solve --tools
 ```
 
+Для каждой задачи без локально проверенного ответа `ico-solve` автоматически
+создаёт Markdown-пrompt для GPT‑4.1 и ZIP с условием, исходными/производными
+файлами, их SHA‑256, найденными неподтверждёнными кандидатами и уже выполненными
+проверками. С prompt-файлом можно сразу продолжить анализ в GPT‑4.1; ZIP приложите
+к сообщению, чтобы модель получила сами файлы. С `--debug` материалы лежат в
+`<debug-dir>/gpt-handoffs/`; без `--debug` — в новой папке
+`./ico-solve-handoffs/run-…/`. Другой каталог задаётся через `--handoff-dir`.
+Пути prompt и ZIP печатаются в stderr, поэтому stdout остаётся copy-ready для
+ответов. Кандидаты явно помечаются как неподтверждённые; handoff не отправляет
+ответы на платформу и не выполняет сетевые запросы.
+
 Профильный запуск выполняется стадиями с bounded-параллельностью: дешёвые
 проверки идут первыми, затем специализированные и тяжёлые. Число воркеров,
 общий дедлайн и постоянный кэш можно задать явно:
@@ -142,8 +153,73 @@ reverse, gzip/zlib), `binwalk`, `zsteg`, `pngcheck`, `exiftool`, `7zz`,
 также локально доступные `pwntools`, `z3`, Ghidra/Cutter, `RsaCtfTool` и
 сетевые/wordlist-инструменты.
 
+В `--mode full` Ghidra headless анализирует локальные PE/ELF/Mach-O до 64 MiB,
+сохраняет строки и ограниченный набор декомпиляций в debug-отчёте, затем удаляет
+временный проект. Этот статический профиль не запускает challenge-бинарник.
+
+Для ELF/PE с явными строками успеха и ошибки `--mode full` также может запустить
+ограниченный angr stdin-поиск: не более 64 печатных байт, 256 активных состояний
+и 48 секунд. Отдельный pinned Python 3.12 runtime не смешивается с основным
+окружением. Решатель выдаёт `candidate`, только если успешный путь зависит от
+символического stdin; Darwin ARM64 checker-и с variadic `scanf` пока помечаются
+unsupported. Сам бинарник нативно не запускается, а найденный ввод не считается
+проверенным без checker-а задачи.
+
+По внешнему плану добавлены отдельные файловые профили: Unblob рекурсивно
+извлекает вложенные контейнеры; Binary Refinery распознаёт Base32, Base58,
+Base64, Base85, hex и URL-кодирование;
+FLOSS и capa выполняют статическую проверку исполняемых файлов; Dissect
+`target-qfind` ищет известные флаговые префиксы в образах диска, в том числе
+в UTF-16LE. Эти профили идут только в `--mode full` и только по подходящему
+типу входа. JPEG-профиль StegSeek запускается в режиме `--seed`: он проверяет
+наличие незашифрованных steghide embedding patterns, сохраняет извлечённый файл
+и повторно ставит его в очередь; режимы со словарём не запускаются. Unblob
+ограничен глубиной 3, входом до 128 MiB, целевым пределом 256 MiB и 4096
+файлов/каталогов, а также watchdog-бюджетом 110 секунд. Dissect
+пропускает образы больше 4 GiB. Его результаты остаются кандидатами: поиск
+совпадения сам по себе не проверяет ответ задачи.
+
+Файлы, извлечённые адаптерами, теперь тоже идут в очередь: решатель заново
+определяет их тип, запускает совместимые офлайн-профили и отправляет новые
+производные файлы на следующий проход. Очередь ограничена глубиной задачи
+(обычно 3), 200 файлами, 100 MiB суммарно и 120 секундами на рекурсивные
+профили; заданный `--deadline` имеет приоритет. Дедупликация идёт по хэшу внутри
+задачи, symlink не обходятся, provenance сохраняет `task_id` и историю в
+`--debug` отчёте.
+
+Опциональные зависимости можно восстановить из закреплённых версий:
+
+```sh
+scripts/install_optional_solver_tools.sh
+source ./env.sh
+ico-solve --tools
+```
+
+Отдельно можно установить активные/динамические утилиты:
+
+```sh
+scripts/install_optional_active_tools.sh
+source ./env.sh
+ico-solve --tools
+```
+
+Этот установщик добавляет AFL++ 5.03c, Nuclei 3.11.1 с локальными templates и
+Arjun 2.2.7 в отдельный Python-runtime. Он только устанавливает инструменты;
+`ico-solve` их не запускает автоматически. AFL++ требует изоляции для запуска
+тестируемого кода, а Arjun/Nuclei применяются только к явно разрешённому
+локальному challenge-сервису. SageMath не установлен: перед ним нужно оценить
+распакованный размер и оставить безопасный запас свободного места.
+
+Katana — настоящий автоматический CTF checklist-решатель, но его README
+предупреждает о web-проверках SQLi/LFI, загрузке shell и попытках RCE. Поэтому
+весь runner не запускается в file-only режиме. Вместо этого в `CryptoSolver`
+добавлены отдельные офлайн-декодеры Morse, NATO-фонетики, T9 multi-tap, Atbash,
+ROT47 и Rail Fence; они включаются только по явной подсказке задачи. Полная
+таблица всех 31 проектов из плана и причины выбора режимов находится в
+[TOOL_CATALOG.md](TOOL_CATALOG.md).
+
 Расширенный слой теперь также учитывает `checksec`, ROPgadget/ropper,
-`objdump`/`nm`/`otool`/LLDB, UPX, angr/Unicorn, `fls`/`mmls`, oletools,
+`objdump`/`nm`/`otool`/LLDB, UPX, angr symbolic execution, `fls`/`mmls`, oletools,
 GIF/audio triage, Apktool/JADX и локальные `semgrep`/TruffleHog/Gitleaks.
 Профили APK декомпилируют только в bounded debug-каталог, а бинарники не
 запускаются. Полный рейтинг новых и ещё не установленных специализированных
@@ -156,11 +232,12 @@ GIF/audio triage, Apktool/JADX и локальные `semgrep`/TruffleHog/Gitlea
 
 Дополнительные статические профили выбираются по содержимому: `hashid` для
 hash-like строк, `Ciphey` для ограниченных encoded/classical-cipher текстов,
-`xortool` для явно похожих XOR-артефактов, `RsaCtfTool` только для RSA-
-материалов, `bulk_extractor` для disk images, `one_gadget` для локальных libc
-и LIEF для структурного чтения ELF/PE/Mach-O. Qiling, Unicorn, Frida,
+`xortool` для явно похожих XOR-артефактов, `RsaCtfTool` для пары RSA-ключа и
+соседнего ciphertext, `bulk_extractor` для disk images, `one_gadget` для
+локальных libc и LIEF для структурного чтения ELF/PE/Mach-O. Qiling, Unicorn, Frida,
 Objection, трассировщики, password crackers и сетевые сканеры остаются
-ручными/local-replica путями.
+ручными/local-replica путями. Установленные Arjun и Nuclei доступны для
+разрешённых локальных web-реплик, но не работают в file-only pipeline.
 
 Через тот же `env.sh` доступны совместимые обёртки `Ciphey`, `peepdf`,
 `hashpumpy`, `one_gadget`, `seccomp-tools`, `clairvoyance`, `graphql-cop`,
@@ -527,7 +604,25 @@ redirects, JWT payload и ограниченные вложенные кодир
 отдельного тестового локального сервиса существует `ico_active.AuthorizedClient`:
 хост должен быть явно указан в
 `TargetPolicy.allowed_hosts`, бюджет запросов ограничен, а `cyberolympiad.kz` и
-его поддомены всегда блокируются. Этот клиент не используется CLI автоматически.
+его поддомены всегда блокируются. Обычный scanner этот клиент не запускает.
+Для Backdoor добавлена отдельная команда: она требует явного `--allow-network`,
+точного совпадения `--target` с одним из `--authorized-target`, автоматически
+не следует redirects и делает максимум два запроса — REST index и один
+объявленный `wp2shell/v1` POST route. Она сохраняет сырой ответ в локальный
+transcript и выводит найденные значения как `transcript-derived`; платформе
+ничего не отправляется.
+
+Пример для выделенного challenge-instance (подставьте его адрес из задания):
+
+```sh
+./ico-quals-active \
+  --allow-network \
+  --authorized-target "$CHALLENGE_URL" \
+  --target "$CHALLENGE_URL" \
+  --out ./backdoor-report
+```
+
+`cyberolympiad.kz` и его поддомены отклоняются до HTTP-запроса.
 
 Матрицу регрессии локальных наборов можно получить без сети:
 
@@ -644,8 +739,9 @@ python3 scripts/run_final_benchmark_cycle.py \
 В summary отдельно записаны измеренные scorecard и созданные successor-корпуса;
 `score-gate` или `evolution-gate` означает, что новый раунд не был создан.
 
-Проверить доступность только тех optional-инструментов, которые упоминаются
-активными профилями, можно без запуска полного scan:
+Проверить полный реестр optional-инструментов, backend и ограничения
+offline/local-only можно без запуска полного scan. Скрипт не вызывает
+`--version` у каждого бинарника:
 
 ```sh
 python3 scripts/check_toolchain.py
@@ -653,10 +749,22 @@ python3 scripts/check_toolchain.py
 
 ## Установленные группы
 
-- **Файлы и стеганография:** `binwalk`, `exiftool`, `pngcheck`, `zsteg`, `steghide`, `stegseek`, `foremost`, `7zz`, `qpdf`, CyberChef 11.5.0.
-- **Реверс и pwn:** Ghidra 12.1.2, Cutter 2.4.1, radare2 6.1.4, `gdb`, `pwntools`, `angr`.
+- **Файлы и стеганография:** `binwalk`, Unblob, `exiftool`, `pngcheck`, `zsteg`, `steghide`, `stegseek`, `foremost`, `7zz`, `qpdf`, CyberChef 11.5.0.
+- **Реверс и pwn:** Ghidra 12.1.2, Cutter 2.4.1, radare2 6.1.4, FLOSS, capa, `gdb`, `pwntools`, `angr`.
 - **Криптография:** `RsaCtfTool`, PyCryptodome, SymPy, Z3.
-- **Форензика и сеть:** Sleuth Kit, Volatility 3 (`vol`), Wireshark/TShark, YARA, `jq`, `ffmpeg`. Для файлов с признаками memory dump запускаются offline-профили Volatility 3.
+- `--mode full` также запускает ограниченный RSA Coppersmith small-root профиль,
+  только когда условие явно содержит `n`, `e`, `c`, известный префикс и длину
+  неизвестного хвоста. Он использует `fpylll`/SymPy из отдельного Python 3.12
+  runtime, не запускает перебор и добавляет plaintext-кандидат только после
+  точной проверки повторным RSA-шифрованием. Это покрывает один конкретный
+  шаблон, а не произвольные lattice-задачи.
+- RSA-профиль также распознаёт нумерованные пары `n_i`/`c_i` и применяет
+  Håstad broadcast recovery только при общем малом показателе и успешной
+  проверке точного CRT-корня повторным шифрованием.
+- Для явно нумерованных `n_i/e_i/c_i` RSA-профиль также проверяет повторное
+  использование простого множителя между ключами (batch GCD); plaintext
+  становится кандидатом только после успешного повторного шифрования.
+- **Форензика и сеть:** Sleuth Kit, Dissect (`target-qfind`), Volatility 3 (`vol`), Wireshark/TShark, YARA, `jq`, `ffmpeg`. Для файлов с признаками memory dump запускаются offline-профили Volatility 3.
 - **Web/API-задачи:** `ffuf`, `feroxbuster`, `gobuster`, `sqlmap`, `nmap`, mitmproxy, OWASP ZAP, Burp Suite Community.
 
 Проверка основных бинарников:

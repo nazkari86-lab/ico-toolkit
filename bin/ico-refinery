@@ -1,0 +1,23 @@
+#!/bin/sh
+set -eu
+
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ANALYSIS_VENV=${ICO_ANALYSIS_VENV:-"$ROOT/../ico-analysis-venv312"}
+
+if [ "$#" -lt 1 ]; then
+  echo "usage: ico-refinery <b32|b58|b64|b85|hex|url> [unit options]" >&2
+  exit 2
+fi
+
+unit=$1
+shift
+case "$unit" in
+  b32|b58|b64|b85|hex|url) ;;
+  *) echo "ico-refinery: unsupported bounded unit: $unit" >&2; exit 2 ;;
+esac
+
+if [ ! -x "$ANALYSIS_VENV/bin/$unit" ]; then
+  echo "ico-refinery: isolated Binary Refinery runtime is unavailable" >&2
+  exit 127
+fi
+exec "$ANALYSIS_VENV/bin/$unit" "$@"

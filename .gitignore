@@ -19,6 +19,7 @@ htmlcov/
 
 # Generated reports and challenge-session artifacts
 ico-scan-runs/
+ico-solve-handoffs/
 ico-final-runs/
 ocr-exp2/
 corpus-matrix/
@@ -41,4 +42,3 @@ vendor/scalpel/autom4te.cache/
 *.a
 *.dylib.dSYM/
 *.so.dSYM/
-

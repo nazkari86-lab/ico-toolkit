@@ -99,6 +99,7 @@ class QualsTaskResult:
     candidates: list[dict[str, Any]] = field(default_factory=list)
     references: list[dict[str, Any]] = field(default_factory=list)
     artifacts: list[str] = field(default_factory=list)
+    derived_inputs: list[str] = field(default_factory=list)
     error: str | None = None
     next_action: str | None = None
 
@@ -153,6 +154,7 @@ def _write_artifact(result: QualsTaskResult, output_dir: Path, name: str, data: 
             raise ValueError(f"derived artifact exceeds byte limit: {len(data)} > {MAX_BYTES}")
         path.write_bytes(data)
     result.artifacts.append(str(path))
+    result.derived_inputs.append(str(path))
     return path
 
 
@@ -1483,7 +1485,7 @@ def solve_wolf_protocol(path: Path, output_dir: Path, *, transcript: Path | None
 
 SERVICE_PLAYBOOKS = {
     "northstar": """# NorthStar offline playbook\n\nRequires a saved response or an authorized task-host transcript.\n1. Confirm the login form action and field names.\n2. Test the documented SQL injection in the task service and save the session cookie.\n3. Use the authenticated node-export field to verify the documented command-injection path.\n4. Record both returned flag-shaped values; do not send requests to the platform domain.\n""",
-    "backdoor": """# Backdoor offline playbook\n\nRequires a saved response or an authorized task-host transcript.\n1. Read `/wp-json/` and identify the plugin namespace.\n2. Read the namespace route description; do not guess a route.\n3. Base64-encode the requested command into JSON field `c`.\n4. Record `/flag.txt` and the process environment values from the task response.\n""",
+    "backdoor": """# Backdoor playbook\n\nThe normal scanner stays offline. For an assigned, authorized challenge instance, `ico-quals-active` can read `/wp-json/`, select the single declared `wp2shell/v1` POST route, and issue one bounded request with a base64 command in JSON field `c`. It records the response locally and never submits flags. The platform host and subdomains are blocked.\n""",
     "pixelmart": """# PixelMart offline playbook\n\nThe local `solve_pixelmart.py` is a network client and is intentionally not run by ico-scan.\nSave the banner/transcript, then recover the LCG parameters from `m`, `x0`, `x1`, `x2_top`, `x3`, and `hidden_bits`; only send mathematically predicted states on the authorized task service.\n""",
     "vip-club": """# VIP Club offline playbook\n\nSave `data0` and `token0` from an authorized service session. The supplied `sha256_ext.py` can build glue padding for secret length 18 and suffix `&level=admin`; ico-scan does not connect to the service or submit the resulting token.\n""",
 }

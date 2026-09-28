@@ -1,0 +1,3 @@
+# Recursive container carving. Install in the extra runtime; its cp39-abi3
+# arm64 wheel supports the current Python 3.14 environment.
+unblob==26.6.4

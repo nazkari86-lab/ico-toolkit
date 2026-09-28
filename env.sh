@@ -35,8 +35,14 @@ if [ -z "${ICO_EXTRA_VENV:-}" ]; then
     ICO_EXTRA_VENV="$ICO_TOOLKIT_ROOT/.venv-extra"
   fi
 fi
+if [ -z "${ICO_ANALYSIS_VENV:-}" ]; then
+  ICO_ANALYSIS_VENV="$ICO_TOOLKIT_ROOT/../ico-analysis-venv312"
+fi
+if [ -z "${ICO_ANGR_VENV:-}" ]; then
+  ICO_ANGR_VENV="$ICO_TOOLKIT_ROOT/../ico-angr-venv312"
+fi
 ICO_TOOL_BIN=${ICO_TOOL_BIN:-$ICO_TOOLKIT_ROOT/bin}
-export ICO_TOOLKIT_ROOT ICO_TOOLKIT_VENV ICO_EXTRA_VENV ICO_TOOL_BIN
+export ICO_TOOLKIT_ROOT ICO_TOOLKIT_VENV ICO_EXTRA_VENV ICO_ANALYSIS_VENV ICO_ANGR_VENV ICO_TOOL_BIN
 
 # Small compatibility wrappers must win over same-named legacy entry points in
 # the shared extra runtime.  Re-prepending is intentional when this file is
@@ -47,6 +53,12 @@ case ":${PATH}:" in
   *":${ICO_EXTRA_VENV}/bin:"*) ;;
   *) PATH="${ICO_EXTRA_VENV}/bin:${PATH}" ;;
 esac
+if [ -d "$ICO_ANALYSIS_VENV/bin" ]; then
+  case ":${PATH}:" in
+    *":${ICO_ANALYSIS_VENV}/bin:"*) ;;
+    *) PATH="${ICO_ANALYSIS_VENV}/bin:${PATH}" ;;
+  esac
+fi
 
 case ":${PATH}:" in
   *":${ICO_TOOLKIT_VENV}/bin:"*) ;;
@@ -71,5 +83,5 @@ esac
 # Reassert the intended precedence after the legacy runtime paths above
 # prepend themselves as well: wrappers, main toolkit Python, extra CLIs, then
 # the rest of the user's PATH.
-PATH="${ICO_TOOL_BIN}:${ICO_TOOLKIT_VENV}/bin:${ICO_EXTRA_VENV}/bin:${ICO_TOOLKIT_ROOT}:${PATH}"
+PATH="${ICO_TOOL_BIN}:${ICO_TOOLKIT_VENV}/bin:${ICO_EXTRA_VENV}/bin:${ICO_ANALYSIS_VENV}/bin:${ICO_TOOLKIT_ROOT}:${PATH}"
 export PATH

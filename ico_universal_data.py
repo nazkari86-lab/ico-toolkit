@@ -5,6 +5,7 @@ from __future__ import annotations
 
 import bz2
 import ast
+import base64
 import gzip
 import hashlib
 import io
@@ -23,7 +24,17 @@ from ico_solver_engine import Detection, SolverContext, SolverLimits, SolverResu
 
 SINGLE_BYTE_PREFIXES = (b"CTF{", b"ico{", b"ICO{", b"flag{", b"FLAG{")
 _CONTAINER_MAGICS = (b"PK\x03\x04", b"\x1f\x8b", b"\xfd7zXZ\x00", b"BZh", b"ustar")
-_ENCODING_WORDS = ("base64", "base32", "hex", "percent", "url", "encoding", "decode", "xor")
+_ENCODING_WORDS = ("base64", "base32", "base58", "base85", "ascii85", "hex", "percent", "url", "encoding", "decode", "xor")
+_BASE58_ALPHABET = b"123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz"
+_BASE58_DIGITS = {character: index for index, character in enumerate(_BASE58_ALPHABET)}
+_BASE85_ALPHABET = b"0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz!#$%&()*+-;<=>?@^_`{|}~"
+_AUTO_BASE_SCAN_BYTES = 1024 * 1024
+_AUTO_BASE_TOKEN_RE = {
+    "base58": re.compile(rb"(?<![123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz])[123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz]{12,4096}(?![123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz])"),
+    "base85": re.compile(rb"(?<!" + re.escape(_BASE85_ALPHABET) + rb")[" + re.escape(_BASE85_ALPHABET) + rb"]{12,4096}(?!" + re.escape(_BASE85_ALPHABET) + rb")"),
+}
+_DECODED_FLAG_RE = re.compile(rb"(?i)(?<![a-z0-9_])(?:ico|ctf|flag|picoctf|htb|seccon)\{[^{}\r\n]{1,256}\}")
+_DECODED_CLUE_RE = re.compile(rb"(?i)\b(?:flag|secret|password|token|base(?:32|58|64|85)|hex|gzip|zip|http|decode|xor)\b")
 _ROT13_FLAG_MARKER_RE = re.compile(rb"(?i)(?<![a-z0-9])(?:vpgs|pgs|synt|vpb)\{")
 _ROT13_TABLE = bytes.maketrans(
     b"ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz",
@@ -44,12 +55,130 @@ def _read_limited(path: Path, limit: int) -> bytes:
     return path.read_bytes()
 
 
+def _hinted_base_views(data: bytes, hints: str, *, max_bytes: int) -> list[dict[str, object]]:
+    """Decode hinted Base58/Base85 and high-confidence unhinted tokens.
+
+    The unhinted pass is a small, deterministic subset of CyberChef-style
+    transform discovery: it scans a bounded text prefix and only keeps decoded
+    data when it exposes a flag, a known file signature, another valid encoding,
+    or a clear next-step clue.  It never searches keys or guessed flag values.
+    """
+
+    clue = f"{hints} {data[:512].decode('ascii', errors='ignore')}".casefold()
+    hinted_base58 = bool(re.search(r"\b(?:base[- ]?58|b58)\b", clue))
+    hinted_base85 = bool(re.search(r"\b(?:base[- ]?85|ascii[- ]?85|b85)\b", clue))
+    stripped = data.strip()
+    adobe_base85 = stripped.startswith(b"<~") and stripped.endswith(b"~>")
+    # Bound opportunistic transform discovery independently per encoding so a
+    # Base58 clue does not suppress a Base85 layer (or lower its confidence).
+    sample = data[: min(max_bytes, _AUTO_BASE_SCAN_BYTES)]
+    use_base58 = hinted_base58 or bool(_AUTO_BASE_TOKEN_RE["base58"].search(sample))
+    use_base85 = hinted_base85 or adobe_base85 or bool(_AUTO_BASE_TOKEN_RE["base85"].search(sample))
+    if not (use_base58 or use_base85):
+        return []
+
+    def tokens_for(label: bytes) -> list[tuple[bytes, int]]:
+        tokens: list[tuple[bytes, int]] = []
+        if stripped and not any(character in stripped for character in (b" ", b"\t", b"\r", b"\n")):
+            tokens.append((stripped, data.find(stripped)))
+        pattern = rb"(?im)^\s*(?:base[- ]?" + label + rb"|b" + label + rb")\s*[:=]\s*(\S{12,4096})\s*$"
+        for match in re.finditer(pattern, data[:max_bytes]):
+            tokens.append((match.group(1), match.start(1)))
+        return tokens[:8]
+
+    views: list[dict[str, object]] = []
+    base58_hinted = hinted_base58
+    base85_hinted = hinted_base85 or adobe_base85
+
+    def has_strong_signal(decoded: bytes) -> tuple[bool, str]:
+        if _looks_like_follow_on_artifact(decoded):
+            return True, "recognized-file-signature"
+        if _DECODED_FLAG_RE.search(decoded):
+            return True, "flag-shaped-plaintext"
+        if encoded_views(decoded[: 4 * 1024 * 1024], max_bytes=4 * 1024 * 1024, max_tokens=4):
+            return True, "valid-next-encoding"
+        if _DECODED_CLUE_RE.search(decoded[: 256 * 1024]):
+            return True, "textual-next-step-clue"
+        return False, ""
+
+    def token_candidates(label: bytes, encoding: str, token_length: int) -> list[tuple[bytes, int]]:
+        # Preserve explicit whole-file/labelled forms, then search a bounded
+        # text prefix for embedded tokens whether or not the task names them.
+        candidates = tokens_for(label)
+        sample = data[: min(max_bytes, _AUTO_BASE_SCAN_BYTES)]
+        for match in _AUTO_BASE_TOKEN_RE[encoding].finditer(sample):
+            candidates.append((match.group(0), match.start()))
+            if len(candidates) >= 12:
+                break
+        unique_candidates: list[tuple[bytes, int]] = []
+        seen_candidates: set[bytes] = set()
+        for token, offset in candidates:
+            if len(token) >= token_length and token not in seen_candidates:
+                unique_candidates.append((token, offset))
+                seen_candidates.add(token)
+            if len(unique_candidates) >= 12:
+                break
+        return unique_candidates
+
+    if use_base58:
+        for token, offset in token_candidates(b"58", "base58", 16 if base58_hinted else 24):
+            if not 16 <= len(token) <= 4096 or any(character not in _BASE58_DIGITS for character in token):
+                continue
+            value = 0
+            for character in token:
+                value = value * 58 + _BASE58_DIGITS[character]
+            leading_zeroes = len(token) - len(token.lstrip(b"1"))
+            decoded = b"\x00" * leading_zeroes + value.to_bytes((value.bit_length() + 7) // 8, "big")
+            if not decoded or len(decoded) > max_bytes:
+                continue
+            strong, signal = has_strong_signal(decoded)
+            if not base58_hinted and not strong:
+                continue
+            views.append({"encoding": "base58", "decoded": decoded, "token": token.decode("ascii"), "offset": offset, "auto_signal": signal if not base58_hinted else "task-or-input-hint"})
+    if use_base85:
+        candidates = token_candidates(b"85", "base85", 12 if base85_hinted else 24)
+        if adobe_base85:
+            candidates.append((stripped, data.find(stripped)))
+        for token, offset in candidates[:8]:
+            if not 12 <= len(token) <= 4096:
+                continue
+            try:
+                if token.startswith(b"<~") and token.endswith(b"~>"):
+                    decoded = base64.a85decode(token, adobe=True)
+                elif "ascii85" in clue or "ascii-85" in clue or "ascii 85" in clue:
+                    decoded = base64.a85decode(token)
+                else:
+                    decoded = base64.b85decode(token)
+            except (ValueError, OverflowError):
+                continue
+            if not decoded or len(decoded) > max_bytes:
+                continue
+            strong, signal = has_strong_signal(decoded)
+            if not base85_hinted and not strong:
+                continue
+            views.append({"encoding": "base85", "decoded": decoded, "token": token.decode("ascii"), "offset": offset, "auto_signal": signal if not base85_hinted else "task-or-input-hint"})
+    return views
+
+
+def _looks_like_follow_on_artifact(data: bytes) -> bool:
+    """Queue recognizable decoded files for the next type-specific solver."""
+
+    if data.startswith((
+        b"PK\x03\x04", b"\x1f\x8b", b"\xfd7zXZ\x00", b"BZh", b"\x89PNG\r\n\x1a\n",
+        b"\xff\xd8\xff", b"%PDF-", b"\x7fELF", b"RIFF", b"\xd4\xc3\xb2\xa1",
+        b"\xa1\xb2\xc3\xd4", b"\x0a\x0d\x0d\x0a",
+    )):
+        return True
+    return len(data) > 262 and data[257:262] == b"ustar"
+
+
 def decode_text_tokens(
     data: bytes,
     *,
     max_bytes: int,
     max_depth: int = 2,
     max_tokens: int = 256,
+    hints: str = "",
 ) -> list[tuple[str, bytes, dict[str, object]]]:
     """Decode syntactically valid bounded tokens, including nested views."""
 
@@ -61,6 +190,7 @@ def decode_text_tokens(
     while queue and len(output) < max_tokens:
         current, depth, parent = queue.pop(0)
         views = encoded_views(current, max_bytes=max_bytes)
+        views.extend(_hinted_base_views(current, hints, max_bytes=max_bytes))
         for view in views:
             decoded = bytes(view["decoded"])
             if len(decoded) > max_bytes:
@@ -75,6 +205,7 @@ def decode_text_tokens(
                 "parent": parent,
                 "offset": int(view.get("offset", 0)),
                 "token": str(view.get("token", "")),
+                "detection": str(view.get("auto_signal", "syntax-validated")),
             }
             output.append((encoding, decoded, metadata))
             if depth < max_depth and len(output) < max_tokens:
@@ -335,13 +466,24 @@ class DataSolver:
                 )
                 wrote_derived = True
 
-            views = decode_text_tokens(data, max_bytes=context.limits.max_bytes)
+            views = decode_text_tokens(
+                data,
+                # CyberChef's local Magic-like pass works on a small prefix by
+                # design. Task-aware decoders and container handlers still get
+                # the full SolverLimits budget through their own paths.
+                max_bytes=min(context.limits.max_bytes, 4 * 1024 * 1024),
+                max_depth=context.limits.max_depth,
+                max_tokens=64,
+                hints=f"{context.input_path.name} {context.task_text or ''}",
+            )
             for index, (encoding, decoded, metadata) in enumerate(views):
                 path = output_root / f"decoded-{hashlib.sha256(decoded).hexdigest()[:12]}-{index:03d}.bin"
                 _write_bounded(path, decoded, max_bytes=context.limits.max_bytes)
                 result.artifacts.append(str(path))
                 wrote_derived = True
                 scan_view(decoded, f"{path}#encoding={encoding}", f"decode-{encoding}", **metadata)
+                if _looks_like_follow_on_artifact(decoded) and len(result.derived_inputs) < 16:
+                    result.derived_inputs.append(str(path))
             if views:
                 result.steps.append({"name": "decode-tokens", "status": "ok", "details": {"count": len(views)}})
 
