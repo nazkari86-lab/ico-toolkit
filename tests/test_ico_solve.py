@@ -53,6 +53,23 @@ class IcoSolveModelTests(unittest.TestCase):
         self.assertIn("ico{active_solve_fixture}", {candidate.value for candidate in report.candidates})
         self.assertTrue(report.metadata["active"]["enabled"])
 
+    def test_aggressive_flag_reaches_adapter_planner_only_for_full_mode(self):
+        with tempfile.TemporaryDirectory() as directory:
+            task = Path(directory) / "task.txt"
+            task.write_text("Family: Crypto\nopaque artifact", encoding="utf-8")
+            with (
+                patch("ico_solve.run_scan", return_value={"summary": {}, "candidates": [], "artifacts": []}),
+                patch("ico_solve.run_adapter_profiles", return_value=[]) as adapters,
+            ):
+                solve_inputs([task], debug_dir=Path(directory) / "full", mode="full", aggressive=True, workers=1)
+                self.assertTrue(any(call.kwargs.get("aggressive") is True for call in adapters.call_args_list))
+            with (
+                patch("ico_solve.run_scan", return_value={"summary": {}, "candidates": [], "artifacts": []}),
+                patch("ico_solve.run_adapter_profiles", return_value=[]) as adapters,
+            ):
+                solve_inputs([task], debug_dir=Path(directory) / "fast", mode="fast", aggressive=True, workers=1)
+                self.assertTrue(any(call.kwargs.get("aggressive") is False for call in adapters.call_args_list))
+
     def test_global_deadline_reserves_time_for_adapter_workers(self):
         self.assertEqual(_scan_budget_for_deadline(180, "fast"), 120)
         self.assertEqual(_scan_budget_for_deadline(180, "full"), 117)

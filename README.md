@@ -1,8 +1,10 @@
 # ICO/CTF toolkit for Apple Silicon
 
 **Реальный внешний замер:** на 24 официальных задачах ImaginaryCTF 2023
-автономный файловый режим дал **0 подтверждённых флагов из 24**; отдельный
-офлайн-поднабор — **0/12**. См. [условия проверки, времена и ограничения](docs/research/2026-09-28-imaginaryctf-2023-baseline.md).
+автономный файловый режим в исходном замере дал **0/24**, после добавления
+QR-deblur и reverse power-equality профилей — **2 hash-verified флага из 24**.
+См. [базовый](docs/research/2026-09-28-imaginaryctf-2023-baseline.md) и
+[повторный](docs/research/2026-09-29-imaginaryctf-2023-after.md) замеры.
 Количество установленных инструментов и локальные регрессионные фикстуры не
 показывают вероятность решения новых задач.
 
@@ -17,6 +19,9 @@
 анализ файлов, дампов и задач, которые явно разрешены условием.
 
 ## Запуск
+
+Для обычного решения достаточно запустить `./ico path/to/task`. Чтобы вызывать
+отдельные инструменты из терминала, активируйте их так:
 
 ```sh
 source ./env.sh
@@ -96,23 +101,32 @@ open $ICO_TOOLKIT_ROOT/CyberChef/app/CyberChef_v11.5.0.html
 
 ## Автономный локальный анализ
 
-Для финального формата есть отдельная copy-ready команда `ico-solve`. Она
-группирует файлы по истории и категории, запускает task-aware решатели,
+Самый короткий запуск не требует `source ./env.sh`:
+
+```sh
+./ico task.zip                 # полный усиленный запуск, 10 минут по умолчанию
+./ico quick task.zip           # быстрая проверка, 2 минуты
+./ico active task.zip          # усиленный запуск и проверка сервиса
+./ico tools                    # список доступных инструментов
+```
+
+Прямой `./ico-solve` оставляет полный контроль над режимом и параметрами.
+Он группирует файлы по истории и категории, запускает task-aware решатели,
 универсальное ядро и расширенный локальный набор адаптеров, а в stdout выводит
 только выбранный флаг:
 
 ```sh
-source ./env.sh
-ico-solve path/to/task-or-archive
-ico-solve path/to/story --mode full --debug ./ico-solve-debug
-ico-solve --tools
+./ico path/to/task-or-archive
+./ico path/to/story --deadline 600 --debug ./ico-solve-debug
+./ico-solve path/to/story --mode full --aggressive --deadline 600 --debug ./ico-solve-debug
+./ico tools
 ```
 
 Для финальных сервисов и локальных бинарников включите активный режим:
 
 ```sh
-ico-solve path/to/task --active --debug ./ico-solve-debug
-ico-solve path/to/task --active --service-url http://challenge-host:8080
+./ico active path/to/task --debug ./ico-solve-debug
+./ico active path/to/task --service-url http://challenge-host:8080
 ```
 
 Он берёт HTTP(S)-адреса из условия, исходников и явного `--service-url`,
@@ -137,8 +151,20 @@ ico-solve path/to/task --active --service-url http://challenge-host:8080
 общий дедлайн и постоянный кэш можно задать явно:
 
 ```sh
-ico-solve path/to/story --workers 6 --deadline 180 --cache ./ico-solve-cache --debug ./ico-solve-debug
+./ico-solve path/to/story --workers 6 --deadline 180 --cache ./ico-solve-cache --debug ./ico-solve-debug
 ```
+
+`./ico` запускает расширенный режим и ограничивает его десятью минутами
+(измените предел через `ICO_DEADLINE=1200 ./ico task.zip` или передайте
+`--deadline 1200`). `./ico quick` ограничен двумя минутами.
+
+Расширенный режим добавляет полный локальный набор атак RsaCtfTool для
+распознанной пары RSA-ключа и ciphertext, Ciphey для текстовых blobs, дополнительные
+units Binary Refinery и расширенный stdin-поиск angr для небольших ELF/PE/Mach-O.
+FeatherDuster остаётся справочным пунктом: upstream версия требует Python 2 и
+интерактивный ввод, поэтому она несовместима с автоматическим решателем.
+Результаты сохраняют происхождение и становятся флагами только при совпадении
+формата. Параметр `--deadline 600` ограничивает полный запуск десятью минутами.
 
 Ключ кэша включает SHA-256 входа, контекст задачи, исполняемый файл, аргументы
 и `ICO_TOOLKIT_REVISION`; изменение файла, условия или версии адаптеров
@@ -194,8 +220,9 @@ reverse, gzip/zlib), `binwalk`, `zsteg`, `pngcheck`, `exiftool`, `7zz`,
 временный проект. Этот статический профиль не запускает challenge-бинарник.
 
 Для ELF/PE с явными строками успеха и ошибки `--mode full` также может запустить
-ограниченный angr stdin-поиск: не более 64 печатных байт, 256 активных состояний
-и 48 секунд. Отдельный pinned Python 3.12 runtime не смешивается с основным
+ограниченный angr stdin-поиск: не более 64 печатных байт, 96 активных состояний
+и 48 секунд. В opt-in `--aggressive` это расширяется до 256 байт, 768 состояний
+и 150 секунд для распознанных небольших бинарников. Отдельный pinned Python 3.12 runtime не смешивается с основным
 окружением. Решатель выдаёт `candidate`, только если успешный путь зависит от
 символического stdin; Darwin ARM64 checker-и с variadic `scanf` пока помечаются
 unsupported. Сам бинарник нативно не запускается, а найденный ввод не считается
@@ -203,7 +230,8 @@ unsupported. Сам бинарник нативно не запускается,
 
 По внешнему плану добавлены отдельные файловые профили: Unblob рекурсивно
 извлекает вложенные контейнеры; Binary Refinery распознаёт Base32, Base58,
-Base64, Base85, hex и URL-кодирование;
+Base64, Base85, hex и URL-кодирование; `--aggressive` добавляет Base62/Base92,
+Base65536, Z85, UU, UTF-16, reverse, bit/byte reverse и decompression;
 FLOSS и capa выполняют статическую проверку исполняемых файлов; Dissect
 `target-qfind` ищет известные флаговые префиксы в образах диска, в том числе
 в UTF-16LE. Эти профили идут только в `--mode full` и только по подходящему

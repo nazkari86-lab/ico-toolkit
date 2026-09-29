@@ -60,7 +60,7 @@ scanner-у: 171 из 230 adapter-запусков не успели начать
 | `objdump`, `nm` | Reverse | секции, строки, символы и дизассемблирование | статически |
 | `otool`, `lldb` | Reverse | Mach-O load commands, библиотеки и список модулей без запуска | статически |
 | `upx` | Reverse | обнаружение и инвентаризация UPX-паковки | только `-l`, распаковка не включена |
-| `angr` + `angr-symbolic` | Reverse | статическое дизассемблирование и ограниченное восстановление stdin для checker-бинарников | отдельный Python 3.12 runtime; только `--mode full`, ≤64 входных байт и ≤48 s; candidate при доказанной зависимости пути от stdin |
+| `angr` + `angr-symbolic` | Reverse | статическое дизассемблирование и восстановление stdin для checker-бинарников | `--mode full`: ≤64 байт/96 states/48 s с success/failure сигналами; opt-in `--aggressive`: ≤256 байт/768 states/150 s для малых распознанных бинарников |
 | Ghidra Headless | Reverse | анализ, извлечение строк и ограниченная декомпиляция локальных PE/ELF/Mach-O | `--mode full`, ≤64 MiB, ≤96 функций, проект удаляется после анализа |
 | `unicorn` | Reverse | multi-architecture CPU emulation library | доступен как Python-модуль |
 | `qiling` | Reverse | OS-aware cross-architecture emulation | extra-runtime, `qiling --probe`; не auto-run |
@@ -77,8 +77,8 @@ scanner-у: 171 из 230 adapter-запусков не успели начать
 | `strace` | PWN | syscall trace for an explicitly authorized local replica | native or macOS `dtruss-compat`; manual-only |
 | `ltrace` | PWN | library-call trace for an explicitly authorized local replica | native or macOS `dtruss-compat`; manual-only |
 | `unblob` | Forensics | рекурсивная распаковка firmware и вложенных контейнеров | `ico-solve --mode full`; input ≤128 MiB, output ≤256 MiB / 4096 entries / 110 s |
-| `Binary Refinery` | Transform | преобразование бинарных и кодированных потоков | `b32`/`b58`/`b64`/`b85`/`hex`/URL по ограниченным сигнатурам; команды идут через bounded `ico-refinery` wrapper |
-| `RsaCtfTool` | Crypto | восстановление plaintext из рядом лежащего RSA-шифротекста | ограниченный набор офлайн-атак; только при связке публичного ключа и ciphertext, без FactorDB/WolframAlpha |
+| `Binary Refinery` | Transform | преобразование бинарных и кодированных потоков | default: `b32`/`b58`/`b64`/`b85`/`hex`/URL; `--aggressive`: Base62/Base92/Base65536/Z85, UU, UTF-16, reverse, bit/byte reverse и decompression; команды идут через bounded `ico-refinery` wrapper |
+| `RsaCtfTool` | Crypto | восстановление plaintext из рядом лежащего RSA-шифротекста | default: набор быстрых офлайн-атак; `--aggressive`: локальный `--attack all` с ограниченным временем; только при связке ключа и ciphertext, без FactorDB/WolframAlpha |
 | `rsa-coppersmith` | Crypto | low-exponent RSA small-root recovery при известном префиксе | `--mode full`; требует явно заданные `n/e/c`, prefix и длину неизвестного хвоста; LLL в отдельном analysis runtime, точная проверка повторным шифрованием |
 | `FLOSS` | Reverse | извлечение статических и декодируемых строк | bounded static profile для executable-файлов |
 | `capa` | Reverse | классификация возможностей PE/ELF/shellcode | bounded static profile; отчёт не равен решению задачи |
@@ -120,7 +120,8 @@ Python-пакеты и Ruby/Go-сборки; они не меняют повед
 
 | Инструмент | Источник/сборка | Проверка | Ограничение |
 | --- | --- | --- | --- |
-| `Ciphey` | PyPI 5.14.0 + локально собранный `vendor/CipheyCore` (arm64) | `ciphey --help`, Base64 smoke | ручной bounded decoder, без ICO-сети |
+| `Ciphey` | PyPI 5.14.0 + локально собранный `vendor/CipheyCore` (arm64) | `ciphey --help`, Base64 smoke | default по явному encoded-сигналу; `--aggressive` для bounded printable blobs, без сети |
+| `FeatherDuster` | NCC Group legacy Python 2 project | not installed into the solver runtime | interactive Python 2 workbench; no reliable non-interactive CLI, so not invoked automatically |
 | `peepdf` | PyPI 0.4.2 в отдельном `ico-peepdf-venv314` | `peepdf --help` | PDF static/manual mode (`-m`), без VirusTotal |
 | `hashpumpy` | PyPI 1.2 + `bin/hashpumpy` CLI | `hashpumpy --help` | length-extension по известному digest; ключи не перебираются |
 | `one_gadget` | Ruby gem 2.1.1 | `one_gadget --help` | только локальная предоставленная libc |

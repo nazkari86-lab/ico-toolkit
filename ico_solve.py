@@ -670,7 +670,8 @@ def _run_adapter_derived_pipeline(
     limits: SolverLimits,
     runner: CommandRunner,
     mode: str,
-    workers: int,
+    aggressive: bool = False,
+    workers: int = 4,
     deadline_seconds: float | None,
     cache_dir: Path | None,
     context_hashes: dict[Path, str],
@@ -850,6 +851,7 @@ def _run_adapter_derived_pipeline(
                 deadline_seconds=remaining,
                 cache_dir=cache_dir,
                 context_hashes=child_context_hashes,
+                aggressive=aggressive,
             )
         except Exception as exc:
             recursive_errors.append(f"adapter round {round_index}: {type(exc).__name__}")
@@ -1450,11 +1452,14 @@ def solve_inputs(
     service_urls: Sequence[str] = (),
     active_request_budget: int = 12,
     active_timeout_seconds: float = 8.0,
+    aggressive: bool = False,
 ) -> SolveReport:
     """Run task-aware, universal, and extended offline adapters."""
 
     if mode not in {"fast", "full"}:
         raise ValueError(f"unsupported solve mode: {mode}")
+    # Aggressive profiles are explicitly opt-in and only augment a full solve.
+    aggressive = bool(aggressive and mode == "full")
     if active_request_budget < 1 or active_timeout_seconds <= 0:
         raise ValueError("active request budget and timeout must be positive")
     source_paths = tuple(Path(item).expanduser() for item in inputs)
@@ -1675,6 +1680,7 @@ def solve_inputs(
             cache_dir=selected_cache,
             context_hashes=context_hashes,
             skip_paths=verified_paths,
+            aggressive=aggressive,
         )
         derived_deadline = None if deadline_at is None else max(0.0, deadline_at - time.monotonic())
         adapter_evidence, derived_solver_results, recursive_stats = _run_adapter_derived_pipeline(
@@ -1686,6 +1692,7 @@ def solve_inputs(
             limits=limits,
             runner=runner,
             mode=mode,
+            aggressive=aggressive,
             workers=workers,
             deadline_seconds=derived_deadline,
             cache_dir=selected_cache,
@@ -1744,6 +1751,7 @@ def solve_inputs(
         candidates = rank_candidates(result_objects, slots)
         metadata = {
             "mode": mode,
+            "aggressive": aggressive,
             "wall_clock_seconds": round(time.monotonic() - started, 6),
             "prompt_solver_result_count": len(prompt_results),
             "prompt_solver_audits": prompt_audits,
@@ -1833,6 +1841,7 @@ def _build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--deadline", type=float, help="global solve deadline shared between scanning and adapter workers")
     parser.add_argument("--cache", type=Path, help="persistent adapter cache directory")
     parser.add_argument("--evidence-db", type=Path, help="persist artifact provenance and candidates in SQLite")
+    parser.add_argument("--aggressive", action="store_true", help="opt in to slower Ciphey, full RSA, expanded Refinery, and broader angr profiles")
     parser.add_argument("--active", action="store_true", help="probe task-service URLs and execute provided runnable binaries")
     parser.add_argument("--service-url", action="append", default=[], help="task-service URL when it is absent from the supplied files")
     parser.add_argument("--active-request-budget", type=int, default=12, help="maximum active HTTP requests across the solve")
@@ -1883,6 +1892,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             service_urls=tuple(args.service_url),
             active_request_budget=args.active_request_budget,
             active_timeout_seconds=args.active_timeout,
+            aggressive=args.aggressive,
         )
     except (OSError, ValueError) as exc:
         print(f"ico-solve: {type(exc).__name__}: {exc}", file=sys.stderr)

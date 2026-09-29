@@ -5,14 +5,14 @@ ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
 ANALYSIS_VENV=${ICO_ANALYSIS_VENV:-"$ROOT/../ico-analysis-venv312"}
 
 if [ "$#" -lt 1 ]; then
-  echo "usage: ico-refinery <b32|b58|b64|b85|hex|url> [unit options]" >&2
+  echo "usage: ico-refinery <b32|b58|b62|b64|b85|b92|b65536|z85|hex|url|uuenc|u16|rev|bitrev|byteswap|decompress> [unit options]" >&2
   exit 2
 fi
 
 unit=$1
 shift
 case "$unit" in
-  b32|b58|b64|b85|hex|url) ;;
+  b32|b58|b62|b64|b85|b92|b65536|z85|hex|url|uuenc|u16|rev|bitrev|byteswap|decompress) ;;
   *) echo "ico-refinery: unsupported bounded unit: $unit" >&2; exit 2 ;;
 esac
 

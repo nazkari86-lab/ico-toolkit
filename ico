@@ -1,0 +1,48 @@
+#!/bin/sh
+set -eu
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
+
+usage() {
+  cat <<'HELP'
+ICO Toolkit quick commands:
+  ./ico FILE...            full aggressive solve (10 minute default budget)
+  ./ico quick FILE...      fast triage (2 minute default budget)
+  ./ico deep FILE...       full aggressive solve
+  ./ico active FILE...     full aggressive solve with task-service probing
+  ./ico tools              show installed tools
+  ./ico help               show this help
+
+Pass extra ico-solve options after the files, for example:
+  ./ico task.zip --deadline 600 --debug ./run
+HELP
+}
+
+if [ "$#" -eq 0 ]; then
+  usage >&2
+  exit 2
+fi
+
+case "$1" in
+  help|-h|--help)
+    usage
+    exit 0
+    ;;
+  tools)
+    shift
+    exec "$ROOT/ico-solve" --tools "$@"
+    ;;
+  quick)
+    shift
+    exec "$ROOT/ico-solve" --mode fast --deadline "${ICO_QUICK_DEADLINE:-120}" "$@"
+    ;;
+  deep)
+    shift
+    exec "$ROOT/ico-solve" --mode full --aggressive --deadline "${ICO_DEADLINE:-600}" "$@"
+    ;;
+  active)
+    shift
+    exec "$ROOT/ico-solve" --mode full --aggressive --active --deadline "${ICO_DEADLINE:-600}" "$@"
+    ;;
+esac
+
+exec "$ROOT/ico-solve" --mode full --aggressive --deadline "${ICO_DEADLINE:-600}" "$@"

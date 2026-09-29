@@ -205,7 +205,8 @@ TOOL_SPECS: tuple[ToolSpec, ...] = (
     _spec("hashid", "hashid", description="hash-family identification", category="crypto"),
     _spec("hashpump", "hashpump", description="hash length-extension payload builder", category="crypto"),
     _spec("hashpumpy", "hashpumpy", python_modules=("hashpumpy",), description="Python hash length-extension library", category="crypto"),
-    _spec("Ciphey", "ciphey", python_modules=("ciphey",), description="automatic bounded encoding/classical-cipher decoder", category="crypto"),
+    _spec("Ciphey", "ciphey", python_modules=("ciphey",), description="automatic encoding/classical-cipher decoder; full search is opt-in with --aggressive", category="crypto"),
+    _spec("FeatherDuster", description="legacy Python 2 interactive cryptanalysis workbench; not auto-run", category="crypto"),
     _spec("pdfid", "pdfid", description="PDF keyword and object triage", category="forensics"),
     _spec("pdf-parser", "pdf-parser", "pdf-parser.py", description="PDF object and stream inspection", category="forensics"),
     _spec("peepdf", "peepdf", description="PDF JavaScript and object analysis", category="forensics"),
@@ -585,6 +586,33 @@ def _suitable_ghidra_input(path: Path) -> bool:
         return False
 
 
+def _suitable_aggressive_text(path: Path) -> bool:
+    """Allow opt-in decoder/classical-cipher tools on bounded opaque text."""
+
+    try:
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > 4 * 1024 * 1024:
+            return False
+    except OSError:
+        return False
+    raw = _bounded_bytes(path, 4 * 1024 * 1024)
+    if len(raw.strip()) < 8 or b"\0" in raw[:4096]:
+        return False
+    printable = sum(32 <= byte < 127 or byte in b"\t\r\n" for byte in raw)
+    return printable / max(1, len(raw)) >= 0.82
+
+
+def _suitable_aggressive_binary(path: Path) -> bool:
+    """Broader opt-in symbolic-execution gate, still bounded to regular binaries."""
+
+    try:
+        if not path.is_file() or path.is_symlink() or path.stat().st_size > 32 * 1024 * 1024:
+            return False
+        head = path.read_bytes()[:16]
+    except OSError:
+        return False
+    return head.startswith((b"\x7fELF", b"MZ", b"\0asm", b"\xfe\xed\xfa", b"\xcf\xfa\xed\xfe"))
+
+
 def _suitable_angr_symbolic_input(path: Path) -> bool:
     """Gate symbolic execution to small binaries with clear branch signals."""
 
@@ -843,6 +871,25 @@ def _rsa_adapter_output_dir(path: Path, output_dir: Path) -> Path:
     return _safe_output_subdir(output_dir, derived.name)
 
 
+def _rsa_aggressive_attack_args(path: Path, output_dir: Path) -> list[str]:
+    """Use RsaCtfTool's complete local attack selector for a recognised RSA task."""
+
+    ciphertexts = _rsa_ciphertext_inputs(path)
+    numeric = _rsa_ciphertext_values(ciphertexts)
+    folder = _rsa_adapter_output_dir(path, output_dir)
+    args = [
+        "rsactftool", "--publickey", str(path), "--attack", "all",
+        "--timeout", "20", "--verbosity", "INFO",
+        "--output", str(folder / "aggressive-plaintext.txt"),
+    ]
+    if numeric:
+        args.extend(("--decrypt", ",".join(numeric)))
+    raw_paths = [str(item) for item in ciphertexts if not _rsa_ciphertext_values((item,))]
+    if raw_paths:
+        args.extend(("--decryptfile", ",".join(raw_paths)))
+    return args
+
+
 def _rsa_offline_attack_args(path: Path, output_dir: Path) -> list[str]:
     ciphertexts = _rsa_ciphertext_inputs(path)
     numeric = _rsa_ciphertext_values(ciphertexts)
@@ -917,8 +964,8 @@ def _looks_like_source_code_input(path: Path) -> bool:
     return any(re.search(signature, sample) for signature in signatures)
 
 
-def profiles_for_classification(classification: Classification) -> tuple[AdapterProfile, ...]:
-    """Select only file-consuming, offline-safe adapters for a file kind."""
+def profiles_for_classification(classification: Classification, *, aggressive: bool = False) -> tuple[AdapterProfile, ...]:
+    """Select local profiles; aggressive adds bounded opt-in heavy strategies."""
 
     kind = classification.kind.lower()
     extension = classification.extension.lower()
@@ -1377,6 +1424,54 @@ def profiles_for_classification(classification: Classification) -> tuple[Adapter
                 ),
             ]
         )
+    if aggressive:
+        # These profiles have meaningful cost/false-positive potential, so the
+        # default solve path remains quick and deterministic.  Aggressive mode
+        # is explicit and still processes only local, bounded task artifacts.
+        if kind in {"text", "data", "binary"} or extension in {".txt", ".dat", ".bin", ".enc", ".cipher"}:
+            profiles.extend(
+                [
+                    _profile(
+                        "ciphey-full", "ciphey",
+                        lambda path, _out: ["ciphey", "-f", str(path), "-q", "-g"],
+                        timeout=150.0, stage="specialized", predicate=_suitable_aggressive_text,
+                    ),
+                ]
+            )
+        if kind in {"binary", "data", "text"} or extension in {".pem", ".pub", ".der", ".key"}:
+            profiles.append(
+                _profile(
+                    "RsaCtfTool-all-attacks", "rsactftool", _rsa_aggressive_attack_args,
+                    timeout=180.0, stage="specialized", collect_dir=_rsa_adapter_output_dir,
+                    predicate=_looks_like_rsa_key_with_ciphertext,
+                )
+            )
+        if kind == "binary" or extension in {".elf", ".exe", ".dll", ".so", ".dylib", ".wasm"}:
+            profiles.append(
+                _profile(
+                    "angr-symbolic-stdin-aggressive", "ico-angr-symbolic",
+                    lambda path, _out: ["ico-angr-symbolic", "--binary", str(path), "--max-seconds", "150", "--max-input", "256", "--max-states", "768", "--max-steps", "12000"],
+                    timeout=165.0, stage="specialized", predicate=_suitable_aggressive_binary,
+                )
+            )
+        if kind in {"text", "data", "binary"} or extension in {".txt", ".log", ".dat", ".bin", ".enc", ".cipher"}:
+            refinery_units = (
+                ("b62", _looks_like_base58_input), ("b92", _looks_like_base58_input),
+                ("b65536", _suitable_aggressive_text), ("z85", _looks_like_base85_input),
+                ("uuenc", _suitable_aggressive_text), ("u16", _suitable_aggressive_text),
+                ("rev", _suitable_aggressive_text), ("bitrev", _suitable_aggressive_text),
+                ("byteswap", _suitable_aggressive_text), ("decompress", _suitable_unblob_input),
+            )
+            for unit, predicate in refinery_units:
+                profiles.append(
+                    _profile(
+                        f"binary-refinery-{unit}", "ico-refinery",
+                        lambda _path, _out, unit=unit: ["ico-refinery", unit, "-Q"],
+                        timeout=45.0, stage="specialized", predicate=predicate,
+                        stdin_builder=_bounded_bytes,
+                    )
+                )
+
     # Keep ordering stable and remove duplicate executable/analyzer pairs.
     seen: set[str] = set()
     unique: list[AdapterProfile] = []
@@ -1873,6 +1968,7 @@ def run_adapter_profiles(
     cache_dir: Path | None = None,
     context_hashes: dict[Path, str] | None = None,
     skip_paths: set[Path] | None = None,
+    aggressive: bool = False,
 ) -> tuple[AdapterEvidence, ...]:
     """Run all available type-matched offline adapters and CyberChef.
 
@@ -1884,6 +1980,9 @@ def run_adapter_profiles(
     if mode not in {"fast", "full"}:
         raise ValueError(f"unsupported adapter mode: {mode}")
     workers = max(1, min(int(workers), 32))
+    # In fast mode, opt-in profiles remain disabled: aggressive is a depth
+    # expansion of a full solve, not a way to bypass the fast triage budget.
+    aggressive = bool(aggressive and mode == "full")
 
     output_dir.mkdir(parents=True, exist_ok=True)
     yara_rule = output_dir / "flag-shape.yar"
@@ -1947,7 +2046,11 @@ def run_adapter_profiles(
         except OSError:
             continue
         task_context = (context_hashes or {}).get(raw_path, "")
-        profiles = profiles_for_classification(classification)
+        profiles = profiles_for_classification(classification, aggressive=True) if aggressive else profiles_for_classification(classification)
+        if aggressive:
+            # The aggressive profile supersedes the regular hint-gated Ciphey
+            # run so one artifact is not decoded twice in the same pass.
+            profiles = tuple(profile for profile in profiles if profile.name != "ciphey")
         applicable_profiles: list[AdapterProfile] = []
         for profile in profiles:
             if profile.predicate is None:

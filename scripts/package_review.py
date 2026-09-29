@@ -19,7 +19,7 @@ PRIORITY = (
 )
 ROOT_FILES = {
     "README.md", "TOOL_CATALOG.md", "AI_REVIEW.md", "env.sh", "verify.sh",
-    "ico-scan", "ico-solve", "ico-quals-active", ".gitignore", ".gitattributes",
+    "ico-scan", "ico-solve", "ico", "ico-quals-active", ".gitignore", ".gitattributes",
     "androguard", "hashpump", "lief", "pdf-parser", "pdfid",
 }
 TEXT_SUFFIXES = {".py", ".sh", ".java", ".md", ".txt", ".json", ".toml", ".yaml", ".yml", ".c", ".cpp", ".h"}

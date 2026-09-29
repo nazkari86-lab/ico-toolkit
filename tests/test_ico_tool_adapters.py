@@ -228,6 +228,35 @@ class ToolAdapterTests(unittest.TestCase):
         for expected in {"checksec", "ROPgadget", "ropper-info", "objdump", "nm", "lldb-modules", "upx-list", "angr-disassemble", "angr-symbolic-stdin"}:
             self.assertIn(expected, names)
 
+    def test_aggressive_profiles_are_opt_in_and_expand_local_strategies(self):
+        text = Classification("text/plain", "ASCII text", "text", ".txt")
+        default_names = {profile.name for profile in profiles_for_classification(text)}
+        aggressive_names = {profile.name for profile in profiles_for_classification(text, aggressive=True)}
+        self.assertNotIn("ciphey-full", default_names)
+        self.assertNotIn("binary-refinery-bitrev", default_names)
+        self.assertTrue({"ciphey-full", "binary-refinery-bitrev", "binary-refinery-decompress"}.issubset(aggressive_names))
+        self.assertNotIn("featherduster", aggressive_names)
+
+    def test_aggressive_rsa_and_angr_profiles_have_expanded_budgets(self):
+        text = Classification("text/plain", "RSA public key", "text", ".pem")
+        binary = Classification("application/octet-stream", "ELF checker", "binary", ".elf")
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            key = root / "public.pem"
+            key.write_text("-----BEGIN RSA PUBLIC KEY-----\nRSA\n-----END RSA PUBLIC KEY-----\n", encoding="ascii")
+            (root / "cipher.ct").write_text("42", encoding="ascii")
+            rsa = next(item for item in profiles_for_classification(text, aggressive=True) if item.name == "RsaCtfTool-all-attacks")
+            args = rsa.args_for(key, root / "out")
+            self.assertEqual(args[args.index("--attack") + 1], "all")
+            self.assertEqual(args[args.index("--timeout") + 1], "20")
+            checker = root / "checker"
+            checker.write_bytes(b"\x7fELF" + b"no textual success marker")
+            angr = next(item for item in profiles_for_classification(binary, aggressive=True) if item.name == "angr-symbolic-stdin-aggressive")
+            self.assertTrue(angr.predicate(checker))
+            angr_args = angr.args_for(checker, root / "out")
+            self.assertIn("256", angr_args)
+            self.assertIn("768", angr_args)
+
     def test_angr_symbolic_profile_requires_success_and_failure_markers(self):
         classification = Classification("application/octet-stream", "ELF checker", "binary", ".elf")
         profile = next(item for item in profiles_for_classification(classification) if item.name == "angr-symbolic-stdin")
